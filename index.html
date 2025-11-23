@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sacred Steps to Redemption</title>
+    <link rel="canonical" href="https://your-canonical-url.com" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+      body {
+        font-family: 'Source Sans 3', sans-serif;
+        transition: background-color 0.3s, color 0.3s;
+      }
+      h1, h2, h3, h4, h5, h6 {
+        font-family: 'Lora', serif;
+      }
+
+      /* --- THEME AND FONT-SIZE DEFINITIONS --- */
+      :root {
+        /* Light Theme (default) */
+        --color-primary-100: 224 242 254; /* sky-100 */
+        --color-primary-200: 186 230 253; /* sky-200 */
+        --color-primary-500: 14 165 233; /* sky-500 */
+        --color-primary-600: 2 132 199; /* sky-600 */
+        --color-primary-700: 3 105 161; /* sky-700 */
+        --color-primary-text: 30 64 175; /* blue-800 */
+        --color-gradient-from: var(--color-primary-500);
+        --color-gradient-to: 129 140 248; /* indigo-400 */
+        --color-background: 248 250 252; /* slate-50 */
+        --color-card-background: 255 255 255;
+        --color-card-secondary-background: 248 250 252; /* slate-50 */
+        --color-text-main: 30 41 59; /* slate-800 */
+        --color-text-muted: 71 85 105; /* slate-600 */
+        --color-text-subtle: 148 163 184; /* slate-400 */
+        --color-border: 226 232 240; /* slate-200 */
+        --color-border-input: 203 213 225; /* slate-300 */
+        --color-accent-100: 255 251 235; /* amber-50 */
+        --color-accent-200: 254 243 224; /* orange-100 */
+        --color-accent-400: 251 191 36; /* amber-400 */
+        --color-accent-600: 234 88 12;  /* orange-600 */
+        --color-accent-800: 146 64 14; /* amber-800 */
+      }
+      
+      html.dark {
+        /* Dark Theme - High Contrast */
+        --color-primary-100: 30 41 59; /* slate-800 */
+        --color-primary-200: 51 65 85; /* slate-700 */
+        --color-primary-500: 56 189 248; /* sky-400 */
+        --color-primary-600: 14 165 233; /* sky-500 */
+        --color-primary-700: 2 132 199; /* sky-600 */
+        --color-primary-text: 224 242 254; /* sky-100 */
+        --color-gradient-from: var(--color-primary-600);
+        --color-gradient-to: 99 102 241; /* indigo-500 */
+        --color-background: 2 6 23;      /* slate-950 */
+        --color-card-background: 15 23 42; /* slate-900 */
+        --color-card-secondary-background: 30 41 59; /* slate-800 */
+        --color-text-main: 241 245 249;   /* slate-100 */
+        --color-text-muted: 203 213 225;  /* slate-300 */
+        --color-text-subtle: 148 163 184; /* slate-400 */
+        --color-border: 30 41 59;        /* slate-800 */
+        --color-border-input: 51 65 85;   /* slate-700 */
+        --color-accent-100: 30 41 59; /* slate-800 */
+        --color-accent-200: 51 65 85; /* slate-700 */
+        --color-accent-400: 250 204 21; /* yellow-400 */
+        --color-accent-600: 234 179 8;  /* yellow-500 */
+        --color-accent-800: 252 211 77; /* amber-300 */
+      }
+
+      [data-font-size="sm"] body { font-size: 14px; }
+      [data-font-size="base"] body { font-size: 16px; }
+      [data-font-size="lg"] body { font-size: 18px; }
+
+      /* Semantic utility classes */
+      .bg-primary { background-color: rgb(var(--color-primary-600)); }
+      .bg-primary-light { background-color: rgb(var(--color-primary-100)); }
+      .bg-primary-dark { background-color: rgb(var(--color-primary-500)); }
+      .bg-background { background-color: rgb(var(--color-background)); }
+      .bg-card { background-color: rgb(var(--color-card-background)); }
+      .bg-card-secondary { background-color: rgb(var(--color-card-secondary-background)); }
+      .hover\:bg-primary-hover:hover { background-color: rgb(var(--color-primary-700)); }
+      .hover\:bg-card-hover:hover { background-color: rgb(var(--color-card-background)); }
+      .hover\:bg-primary-light-hover:hover { background-color: rgb(var(--color-primary-200)); }
+
+      .text-primary { color: rgb(var(--color-primary-600)); }
+      .text-primary-on-light { color: rgb(var(--color-primary-text)); }
+      .text-main { color: rgb(var(--color-text-main)); }
+      .text-muted { color: rgb(var(--color-text-muted)); }
+      .text-subtle { color: rgb(var(--color-text-subtle)); }
+      .text-on-primary { color: white; }
+
+      .border-primary { border-color: rgb(var(--color-primary-500)); }
+      .border-primary-light { border-color: rgb(var(--color-primary-200)); }
+      .border-default { border-color: rgb(var(--color-border)); }
+      .border-input { border-color: rgb(var(--color-border-input)); }
+
+      .ring-primary:focus {
+        --tw-ring-color: rgb(var(--color-primary-500));
+      }
+      .focus\:border-primary:focus {
+        border-color: rgb(var(--color-primary-500));
+      }
+
+      .gradient-milestone {
+         background-image: linear-gradient(to bottom right, rgb(var(--color-gradient-from)), rgb(var(--color-gradient-to)));
+      }
+
+      /* Accent colors for streaks/gratitude */
+      .bg-accent-light { background-color: rgb(var(--color-accent-100)); }
+      .hover\:bg-accent-light-hover:hover { background-color: rgb(var(--color-accent-200)); }
+      .text-accent { color: rgb(var(--color-accent-600)); }
+      .text-accent-dark { color: rgb(var(--color-accent-800)); }
+      .border-accent { border-color: rgb(var(--color-accent-400)); }
+
+      /* Base body styles */
+      body {
+        background-color: rgb(var(--color-background));
+        color: rgb(var(--color-text-main));
+      }
+
+      /* --- PRINT STYLES --- */
+      @media print {
+        body {
+          background-color: #fff;
+          color: #000;
+          font-size: 11pt;
+        }
+
+        .no-print,
+        header.text-center,
+        aside,
+        footer {
+          display: none !important;
+        }
+
+        .container {
+          max-width: 100%;
+          padding: 0;
+          margin: 0;
+        }
+        main {
+          width: 100%;
+          margin: 0;
+          padding: 0;
+          grid-column: span 12 / span 12 !important;
+        }
+
+        .bg-white, .bg-slate-50, .hover\:bg-white, .bg-card, .bg-card-secondary {
+          background-color: #fff !important;
+        }
+        .shadow-md, .shadow-lg, .shadow-sm, .rounded-xl, .rounded-lg, .rounded-md {
+          box-shadow: none !important;
+          border: 1px solid #ddd;
+          border-radius: 0 !important;
+        }
+        .transition-all, .transition-colors {
+          transition: none !important;
+        }
+
+        .grid {
+          display: block;
+        }
+        .grid > * {
+          margin-bottom: 1.5rem;
+        }
+
+        textarea {
+          border: none !important;
+          box-shadow: none !important;
+          background-color: transparent !important;
+          resize: none;
+          color: #000 !important;
+          padding: 0 !important;
+          overflow: visible; /* Show all content */
+          height: auto !important; /* Adjust height to content */
+          -webkit-print-color-adjust: exact;
+        }
+
+        h2, h3, blockquote {
+          page-break-after: avoid;
+          page-break-inside: avoid;
+        }
+        
+        .space-y-6 > * {
+            page-break-inside: avoid;
+        }
+      }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.28.0",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0"
+  }
+}
+</script>
+</head>
+  <body class="bg-background text-main">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
+</html>

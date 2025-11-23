@@ -1,0 +1,7 @@
+{
+  "name": "Sacred Steps to Redemption",
+  "description": "A 52-week journal designed to support individuals on their journey of recovery from addiction. Each week provides a theme, biblical aspirations, reflective prompts, and prayers to encourage thankfulness and spiritual growth.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
