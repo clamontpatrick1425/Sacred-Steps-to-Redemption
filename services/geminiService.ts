@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type, Modality, Chat } from "@google/genai";
-import type { WeeklyTheme, JournalResponses, SavedEntries, GratitudeEntry, SuggestedResource, PrayerWallEntry, EmotionDataPoint, MomentOfGrace } from '../types';
+import type { WeeklyTheme, JournalResponses, SavedEntries, GratitudeEntry, PrayerWallEntry, EmotionDataPoint, MomentOfGrace } from '../types';
 
 const journalSchema = {
   type: Type.ARRAY,
@@ -25,19 +25,6 @@ const journalSchema = {
         required: ['text', 'author'],
       },
       prayer: { type: Type.STRING, description: "A weekly prayer, 2500 characters or less." },
-      suggestedResources: {
-        type: Type.ARRAY,
-        description: "An array of exactly 3 suggested resources like guided meditations or articles related to the week's theme.",
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            title: { type: Type.STRING, description: "The title of the resource." },
-            url: { type: Type.STRING, description: "A valid URL to the resource (e.g., YouTube video, article)." },
-            type: { type: Type.STRING, description: "The type of resource: 'video', 'article', or 'audio'." },
-          },
-          required: ['title', 'url', 'type'],
-        },
-      },
       songTitle: { type: Type.STRING, description: "An uplifting song title related to the theme." },
       songLinks: {
           type: Type.OBJECT,
@@ -60,7 +47,6 @@ const journalSchema = {
       'reflectionQuestion2',
       'quote',
       'prayer',
-      'suggestedResources',
       'songTitle',
       'songLinks'
     ]
@@ -89,7 +75,6 @@ export const generateJournalContent = async (): Promise<WeeklyTheme[]> => {
     - reflectionQuestion2: A second, distinct reflection question.
     - quote: An object containing an inspirational quote from a notable spiritual figure or author, with 'text' and 'author' fields. Ensure the author's name is always provided.
     - prayer: A heartfelt weekly prayer under 2500 characters.
-    - suggestedResources: An array of exactly 3 relevant external resources for guided meditation, prayer, or reflection that align with the week's theme. Try to provide real, well-known resources where possible. For each resource, provide a 'title', a valid 'url' (e.g., to a YouTube video or a reputable article), and a 'type' ('video', 'article', 'audio').
     - songTitle: A creative, uplifting song title related to the week's theme.
     - songLinks: An object with two keys: 'spotify' and 'appleMusic'. Use placeholder URLs for these, for example: 'https://open.spotify.com/track/placeholder123' and 'https://music.apple.com/us/album/placeholder/123'.
     
@@ -295,82 +280,6 @@ export const generateMilestoneSummary = async (
   } catch (error) {
     console.error("Error generating milestone summary:", error);
     throw new Error("Failed to generate your milestone summary. Please try again.");
-  }
-};
-
-export const findReplacementResource = async (
-  theme: WeeklyTheme,
-  brokenResource: SuggestedResource
-): Promise<SuggestedResource> => {
-    if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set.");
-  }
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
-  const prompt = `
-    I need a replacement for a broken link in a recovery journal.
-    Theme: "${theme.theme}".
-    The user is looking for a replacement for: "${brokenResource.title}" (${brokenResource.type}).
-    
-    USE GOOGLE SEARCH to find a valid URL for a high-quality, currently available ${brokenResource.type} (or similar) that matches this theme.
-    
-    Return the details in this exact format:
-    Title: <The title of the resource>
-    URL: <The direct URL>
-    Type: <video, article, or audio>
-  `;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
-      contents: prompt,
-      config: {
-        tools: [{googleSearch: {}}],
-        responseMimeType: "text/plain",
-      },
-    });
-
-    const text = response.text || "";
-    
-    // Parse the formatted text response
-    const titleMatch = text.match(/Title:\s*(.+)/i);
-    const urlMatch = text.match(/URL:\s*(.+)/i);
-    const typeMatch = text.match(/Type:\s*(.+)/i);
-
-    let title = titleMatch ? titleMatch[1].trim() : "";
-    let url = urlMatch ? urlMatch[1].trim() : "";
-    let type = typeMatch ? typeMatch[1].trim().toLowerCase() : "article";
-    
-    // Prioritize grounding chunks for the URL as they are real search results
-    if (response.candidates?.[0]?.groundingMetadata?.groundingChunks) {
-        const chunk = response.candidates[0].groundingMetadata.groundingChunks.find(c => c.web?.uri);
-        if (chunk?.web?.uri) {
-            url = chunk.web.uri;
-            if (chunk.web.title) title = chunk.web.title;
-        }
-    }
-
-    if (!url) {
-        // Fallback: if no URL found, maybe try to construct a search URL or throw
-        throw new Error("No valid URL found in search results.");
-    }
-
-    if (!title) title = "Suggested Resource";
-    
-    // Normalize type
-    if (!['video', 'article', 'audio'].includes(type)) {
-        type = 'article';
-    }
-
-    return {
-        title,
-        url,
-        type: type as 'video' | 'article' | 'audio'
-    };
-
-  } catch (error) {
-    console.error("Error finding replacement resource:", error);
-    throw new Error("Failed to find a replacement resource. Please try again later.");
   }
 };
 

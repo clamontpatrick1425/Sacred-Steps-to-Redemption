@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect } from 'react';
-import type { WeeklyTheme, JournalResponses, SuggestedResource } from '../types';
+import type { WeeklyTheme, JournalResponses, UndoAction, SavedEntries } from '../types';
 import { PrintPreviewModal } from './PrintPreviewModal';
 import { generatePersonalPrayer, generateDeeperReflectionPrompt, generateGoalSuggestions } from '../services/geminiService';
 import { TextToSpeechButton } from './TextToSpeechButton';
@@ -14,7 +15,6 @@ interface JournalEntryProps {
   responses: Partial<JournalResponses>;
   onResponseChange: (week: number, field: keyof JournalResponses, value: string) => void;
   onShowToast: (message: string, type: 'error' | 'info' | 'success') => void;
-  onReplaceResource: (week: number, resourceIndex: number, brokenResource: SuggestedResource) => Promise<void>;
   isFocusMode: boolean;
   onToggleFocusMode: () => void;
   imageUrl: string | null;
@@ -29,7 +29,18 @@ interface JournalEntryProps {
   podcast: string | null;
   isGeneratingPodcast: boolean;
   onGeneratePodcast: (week: number, theme: WeeklyTheme) => void;
+  lastChange: UndoAction | null;
+  onUndo: () => void;
+  allThemes: WeeklyTheme[];
+  allResponses: SavedEntries;
+  allImages: { [week: number]: string };
 }
+
+const LIMITS = {
+    personalGoal: 300,
+    promptResponse: 3000,
+    reflectionResponse: 1500,
+};
 
 const InfoCard: React.FC<{ title: string; children: React.ReactNode; icon?: React.ReactNode; action?: React.ReactNode; className?: string; }> = ({ title, children, icon, action, className }) => (
     <div className={`bg-card rounded-xl shadow-md p-6 transition-all hover:shadow-lg ${className || ''}`}>
@@ -42,6 +53,40 @@ const InfoCard: React.FC<{ title: string; children: React.ReactNode; icon?: Reac
         </div>
         <div className="text-muted space-y-2">{children}</div>
     </div>
+);
+
+const CharacterCount: React.FC<{ current: number; max: number }> = ({ current, max }) => {
+    const isNearLimit = current > max * 0.9;
+    const isOverLimit = current > max;
+    return (
+        <span className={`text-xs font-medium transition-colors ${isOverLimit ? 'text-red-600' : isNearLimit ? 'text-amber-600' : 'text-subtle'}`}>
+            {current.toLocaleString()} / {max.toLocaleString()}
+        </span>
+    );
+};
+
+const UndoIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6" />
+    </svg>
+);
+
+const UndoButton: React.FC<{ onUndo: () => void }> = ({ onUndo }) => (
+    <button
+        onClick={(e) => { e.preventDefault(); onUndo(); }}
+        className="flex items-center text-xs font-medium text-primary hover:text-primary-hover transition-colors mr-3 animate-fade-in"
+        title="Undo last change"
+        aria-label="Undo last change"
+    >
+        <UndoIcon />
+        <span className="ml-1">Undo</span>
+    </button>
+);
+
+const RequiredBadge: React.FC = () => (
+    <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold bg-primary-light text-primary uppercase tracking-wider">
+        Required
+    </span>
 );
 
 const BookOpenIcon = () => (
@@ -80,39 +125,9 @@ const PrinterIcon = () => (
     </svg>
 );
 
-const VideoCameraIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-    </svg>
-);
-
-const DocumentTextIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-    </svg>
-);
-
-const VolumeUpIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
-    </svg>
-);
-
-const ExternalLinkIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 ml-1.5 opacity-60 group-hover:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-    </svg>
-);
-
 const ShareIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6.002l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-    </svg>
-);
-
-const RefreshIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5m-5 2a9 9 0 0014.23 4.23l1.77-1.77M4 12A9 9 0 0115.77 4.23l1.77 1.77" />
     </svg>
 );
 
@@ -138,6 +153,18 @@ const FocusExitIcon = () => (
 const ImageIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
       <path strokeLinecap="round" strokeLinejoin="round" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+    </svg>
+);
+
+const RefreshIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h5M20 20v-5h-5M20 4h-5v5M4 20h5v-5" />
+    </svg>
+);
+
+const DownloadIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
     </svg>
 );
 
@@ -167,19 +194,11 @@ const MicrophoneIcon = () => (
 );
 
 
-const resourceIcons = {
-    video: <VideoCameraIcon />,
-    article: <DocumentTextIcon />,
-    audio: <VolumeUpIcon />,
-};
-
-
-export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, onResponseChange, onShowToast, onReplaceResource, isFocusMode, onToggleFocusMode, imageUrl, onGenerateImage, isGeneratingImage, onShare, affirmation, isLoadingAffirmation, lyrics, isGeneratingLyrics, onGenerateLyrics, podcast, isGeneratingPodcast, onGeneratePodcast }) => {
+export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, onResponseChange, onShowToast, isFocusMode, onToggleFocusMode, imageUrl, onGenerateImage, isGeneratingImage, onShare, affirmation, isLoadingAffirmation, podcast, isGeneratingPodcast, onGeneratePodcast, lastChange, onUndo, allThemes, allResponses, allImages }) => {
   const [isPrintModalOpen, setPrintModalOpen] = useState(false);
   const [personalizedPrayer, setPersonalizedPrayer] = useState<string | null>(null);
   const [isGeneratingPrayer, setIsGeneratingPrayer] = useState(false);
   const [prayerError, setPrayerError] = useState<string | null>(null);
-  const [replacingResourceIndex, setReplacingResourceIndex] = useState<number | null>(null);
   
   // State for Deeper Reflection
   const [deeperPrompt, setDeeperPrompt] = useState<string | null>(null);
@@ -191,9 +210,6 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
   const [isGeneratingGoals, setIsGeneratingGoals] = useState(false);
   const [goalError, setGoalError] = useState<string | null>(null);
   
-  // State for QR Code Modal
-  const [qrCodeData, setQrCodeData] = useState<{url: string, title: string} | null>(null);
-
   // State for Podcast Player
   const [podcastAudioUrl, setPodcastAudioUrl] = useState<string | null>(null);
 
@@ -332,11 +348,18 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
     }
   };
 
-  const handleReplaceClick = async (index: number, resource: SuggestedResource) => {
-    if (!entry) return;
-    setReplacingResourceIndex(index);
-    await onReplaceResource(entry.week, index, resource);
-    setReplacingResourceIndex(null);
+  const triggerImageGeneration = () => {
+    onGenerateImage(entry.week, `Week ${entry.week} Theme: ${entry.theme}. Concept: ${entry.explanation}`);
+  };
+
+  const handleDownloadImage = () => {
+    if (!imageUrl) return;
+    const link = document.createElement('a');
+    link.href = imageUrl;
+    link.download = `SacredSteps-Week${entry.week}-Art.png`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
   };
 
 
@@ -371,20 +394,41 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                 <h2 className="text-3xl font-bold text-main">{`Week ${entry.week}: ${entry.theme}`}</h2>
                 <p className="mt-2 text-muted">{entry.explanation}</p>
             </div>
-            <div className="mt-6 relative z-10 aspect-video rounded-lg overflow-hidden bg-card-secondary flex items-center justify-center">
+            <div className="mt-6 relative z-10 aspect-video rounded-lg overflow-hidden bg-card-secondary flex items-center justify-center group">
                  {isGeneratingImage ? (
                     <ImageSkeleton />
                 ) : imageUrl ? (
-                    <img src={imageUrl} alt={`Reflective art for ${entry.theme}`} className="w-full h-full object-cover" />
+                    <>
+                        <img src={imageUrl} alt={`Reflective art for ${entry.theme}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                             <button 
+                                onClick={triggerImageGeneration}
+                                className="flex items-center px-3 py-2 bg-white/90 text-primary font-semibold rounded-md hover:bg-white transition-all transform translate-y-2 group-hover:translate-y-0"
+                                title="Generate a different image"
+                            >
+                                <RefreshIcon />
+                                Regenerate
+                            </button>
+                             <button 
+                                onClick={handleDownloadImage}
+                                className="flex items-center px-3 py-2 bg-primary/90 text-white font-semibold rounded-md hover:bg-primary transition-all transform translate-y-2 group-hover:translate-y-0"
+                                title="Download this art"
+                            >
+                                <DownloadIcon />
+                                Save Art
+                            </button>
+                        </div>
+                    </>
                 ) : (
                     <div className="text-center p-4">
                         <div className="mx-auto h-12 w-12 text-subtle"><ImageIcon /></div>
-                        <p className="mt-2 text-sm text-muted">Generate a reflective image for this week's theme.</p>
+                        <p className="mt-2 text-sm text-muted">Unlock a unique, AI-generated reflective artwork for this week's theme.</p>
                         <button 
-                            onClick={() => onGenerateImage(entry.week, entry.explanation)}
-                            className="mt-4 flex items-center justify-center w-full sm:w-auto px-4 py-2 bg-primary text-on-primary text-sm font-medium rounded-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 ring-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                            onClick={triggerImageGeneration}
+                            className="mt-4 flex items-center justify-center w-full sm:w-auto px-6 py-2 bg-primary text-on-primary text-sm font-semibold rounded-md shadow-lg hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 ring-primary transition-all transform hover:scale-105 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            Generate Image
+                            <ImageIcon />
+                            <span className="ml-2">Generate Weekly Art</span>
                         </button>
                     </div>
                 )}
@@ -475,11 +519,20 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
         >
           <p className="text-lg text-muted">{entry.biblicalAspiration}</p>
           <div className="mt-6 pt-6 border-t border-default">
-            <h4 className="text-base font-semibold text-main mb-2">My Personal Goal for this Week</h4>
+            <div className="flex items-center justify-between mb-2">
+                <h4 className="text-base font-semibold text-main">My Personal Goal for this Week</h4>
+                <div className="flex items-center">
+                    {lastChange?.week === entry.week && lastChange?.field === 'personalGoal' && (
+                        <UndoButton onUndo={onUndo} />
+                    )}
+                    <CharacterCount current={(responses.personalGoal || '').length} max={LIMITS.personalGoal} />
+                </div>
+            </div>
             <p className="text-sm text-muted mb-4">Translate this week's theme into a small, actionable step.</p>
              <textarea
                 id="personal-goal"
                 rows={3}
+                maxLength={LIMITS.personalGoal}
                 className="w-full p-3 border border-input rounded-md shadow-sm focus:ring-primary focus:border-primary transition-colors duration-200 ease-in-out bg-card-secondary hover:bg-card"
                 placeholder="e.g., I will call a friend I haven't spoken to in a while."
                 aria-label="Your personal goal for the week"
@@ -493,13 +546,16 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                     className="flex items-center justify-center w-full sm:w-auto px-4 py-2 text-sm bg-primary text-on-primary rounded-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 ring-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                     {isGeneratingGoals ? (
-                        <><LoadingSpinnerIcon /> <span className="ml-2">Suggesting...</span></>
-                    ) : "Suggest a Goal"}
+                        <><LoadingSpinnerIcon /> <span className="ml-2">Generating Suggestions...</span></>
+                    ) : "Generate Goal Suggestions"}
                 </button>
                 {goalError && <p className="text-sm text-red-600 mt-2">{goalError}</p>}
                 {goalSuggestions.length > 0 && (
-                    <div className="mt-4 space-y-2 animate-fade-in">
-                        <p className="text-xs text-subtle">Click a suggestion to use it:</p>
+                    <div className="mt-4 space-y-2 animate-fade-in relative">
+                        <div className="flex justify-between items-center mb-1">
+                             <p className="text-xs text-subtle">Click a suggestion to use it:</p>
+                             <button onClick={() => setGoalSuggestions([])} className="text-xs text-muted hover:text-red-500 transition-colors">Clear</button>
+                        </div>
                         {goalSuggestions.map((suggestion, index) => (
                             <button 
                                 key={index} 
@@ -522,20 +578,30 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
             <TextToSpeechButton textToSpeak={entry.prompt} onShowToast={onShowToast} />
           }
         >
-            <p className="text-lg text-muted">{entry.prompt}</p>
+            <div className="flex items-center">
+                <p className="text-lg text-muted">{entry.prompt}</p>
+                <RequiredBadge />
+            </div>
             <div className="mt-6">
               <div className="flex items-center justify-between mb-2">
                 <label htmlFor="prompt-response" className="block text-sm font-medium text-muted">
                     Your Response
                 </label>
-                <AudioRecorderButton 
-                    onTranscription={(text) => onResponseChange(entry.week, 'promptResponse', (responses.promptResponse || '') + ' ' + text)}
-                    onShowToast={onShowToast}
-                />
+                <div className="flex items-center space-x-3">
+                    {lastChange?.week === entry.week && lastChange?.field === 'promptResponse' && (
+                        <UndoButton onUndo={onUndo} />
+                    )}
+                    <CharacterCount current={(responses.promptResponse || '').length} max={LIMITS.promptResponse} />
+                    <AudioRecorderButton 
+                        onTranscription={(text) => onResponseChange(entry.week, 'promptResponse', (responses.promptResponse || '') + ' ' + text)}
+                        onShowToast={onShowToast}
+                    />
+                </div>
               </div>
               <textarea
                   id="prompt-response"
                   rows={8}
+                  maxLength={LIMITS.promptResponse}
                   className="w-full p-3 border border-input rounded-md shadow-sm focus:ring-primary focus:border-primary transition-colors duration-200 ease-in-out bg-card-secondary hover:bg-card"
                   placeholder="Write your thoughts here or use the microphone to record..."
                   aria-label="Your response to the weekly prompt"
@@ -550,23 +616,31 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
               <div className="space-y-6">
                   <div>
                       <div className="flex items-start justify-between mb-2">
-                          <p className="font-medium text-main pr-2">
-                              {entry.reflectionQuestion1}
-                          </p>
+                          <div className="flex items-start">
+                              <p className="font-medium text-main pr-2">{entry.reflectionQuestion1}</p>
+                              <RequiredBadge />
+                          </div>
                           <TextToSpeechButton textToSpeak={entry.reflectionQuestion1} onShowToast={onShowToast} />
                       </div>
                       <div className="flex items-center justify-between mb-2">
                         <label htmlFor="reflection-1-response" className="block text-sm font-medium text-muted">
                             Your Reflection
                         </label>
-                        <AudioRecorderButton 
-                            onTranscription={(text) => onResponseChange(entry.week, 'reflection1Response', (responses.reflection1Response || '') + ' ' + text)}
-                            onShowToast={onShowToast}
-                        />
+                        <div className="flex items-center space-x-3">
+                            {lastChange?.week === entry.week && lastChange?.field === 'reflection1Response' && (
+                                <UndoButton onUndo={onUndo} />
+                            )}
+                            <CharacterCount current={(responses.reflection1Response || '').length} max={LIMITS.reflectionResponse} />
+                            <AudioRecorderButton 
+                                onTranscription={(text) => onResponseChange(entry.week, 'reflection1Response', (responses.reflection1Response || '') + ' ' + text)}
+                                onShowToast={onShowToast}
+                            />
+                        </div>
                       </div>
                       <textarea
                           id="reflection-1-response"
                           rows={5}
+                          maxLength={LIMITS.reflectionResponse}
                           className="w-full p-3 border border-input rounded-md shadow-sm focus:ring-primary focus:border-primary transition-colors duration-200 ease-in-out bg-card-secondary hover:bg-card"
                           placeholder="Your reflection..."
                           aria-label={`Response for the question: ${entry.reflectionQuestion1}`}
@@ -576,23 +650,31 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                   </div>
                   <div>
                       <div className="flex items-start justify-between mb-2">
-                          <p className="font-medium text-main pr-2">
-                              {entry.reflectionQuestion2}
-                          </p>
+                          <div className="flex items-start">
+                              <p className="font-medium text-main pr-2">{entry.reflectionQuestion2}</p>
+                              <RequiredBadge />
+                          </div>
                           <TextToSpeechButton textToSpeak={entry.reflectionQuestion2} onShowToast={onShowToast} />
                       </div>
                       <div className="flex items-center justify-between mb-2">
                         <label htmlFor="reflection-2-response" className="block text-sm font-medium text-muted">
                             Your Reflection
                         </label>
-                        <AudioRecorderButton 
-                            onTranscription={(text) => onResponseChange(entry.week, 'reflection2Response', (responses.reflection2Response || '') + ' ' + text)}
-                            onShowToast={onShowToast}
-                        />
+                        <div className="flex items-center space-x-3">
+                            {lastChange?.week === entry.week && lastChange?.field === 'reflection2Response' && (
+                                <UndoButton onUndo={onUndo} />
+                            )}
+                            <CharacterCount current={(responses.reflection2Response || '').length} max={LIMITS.reflectionResponse} />
+                            <AudioRecorderButton 
+                                onTranscription={(text) => onResponseChange(entry.week, 'reflection2Response', (responses.reflection2Response || '') + ' ' + text)}
+                                onShowToast={onShowToast}
+                            />
+                        </div>
                       </div>
                       <textarea
                           id="reflection-2-response"
                           rows={5}
+                          maxLength={LIMITS.reflectionResponse}
                           className="w-full p-3 border border-input rounded-md shadow-sm focus:ring-primary focus:border-primary transition-colors duration-200 ease-in-out bg-card-secondary hover:bg-card"
                           placeholder="Your reflection..."
                           aria-label={`Response for the question: ${entry.reflectionQuestion2}`}
@@ -654,14 +736,21 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                             <label htmlFor="deeper-reflection-response" className="block text-sm font-medium text-muted">
                                 Your Deeper Reflection
                             </label>
-                            <AudioRecorderButton 
-                                onTranscription={(text) => onResponseChange(entry.week, 'deeperReflectionResponse', (responses.deeperReflectionResponse || '') + ' ' + text)}
-                                onShowToast={onShowToast}
-                            />
+                            <div className="flex items-center space-x-3">
+                                {lastChange?.week === entry.week && lastChange?.field === 'deeperReflectionResponse' && (
+                                    <UndoButton onUndo={onUndo} />
+                                )}
+                                <CharacterCount current={(responses.deeperReflectionResponse || '').length} max={LIMITS.reflectionResponse} />
+                                <AudioRecorderButton 
+                                    onTranscription={(text) => onResponseChange(entry.week, 'deeperReflectionResponse', (responses.deeperReflectionResponse || '') + ' ' + text)}
+                                    onShowToast={onShowToast}
+                                />
+                            </div>
                         </div>
                         <textarea
                             id="deeper-reflection-response"
                             rows={5}
+                            maxLength={LIMITS.reflectionResponse}
                             className="w-full p-3 border border-input rounded-md shadow-sm focus:ring-primary focus:border-primary transition-colors duration-200 ease-in-out bg-card-secondary hover:bg-card"
                             placeholder="Your deeper reflection..."
                             aria-label={`Response for the deeper reflection question: ${deeperPrompt}`}
@@ -674,48 +763,6 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
             </InfoCard>
           </div>
         </div>
-
-        <InfoCard title="Suggested Resources" icon={<BookOpenIcon />}>
-            <p className="text-sm text-muted mb-4">
-                Explore these external resources for guided meditation, prayer, and deeper reflection on this week's theme.
-            </p>
-            <ul className="space-y-3">
-                {entry.suggestedResources && entry.suggestedResources.map((resource, index) => (
-                    <li key={index} className="group flex items-center justify-between p-1 -m-1 rounded-lg hover:bg-primary-light transition-colors">
-                        <a 
-                            href={resource.url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="flex items-center flex-1"
-                            aria-label={`${resource.title} (${resource.type}). Opens in a new tab.`}
-                        >
-                            <div className="flex-shrink-0 mr-4 text-primary">
-                                {resourceIcons[resource.type] || <DocumentTextIcon />}
-                            </div>
-                            <div className="flex-1 overflow-hidden">
-                                <p className="font-medium text-main group-hover:text-primary-on-light truncate">{resource.title}</p>
-                                <p className="text-xs text-muted capitalize">{resource.type}</p>
-                            </div>
-                            <ExternalLinkIcon />
-                        </a>
-                         <div className="ml-2 flex-shrink-0">
-                            <button
-                                onClick={() => handleReplaceClick(index, resource)}
-                                disabled={replacingResourceIndex !== null}
-                                className="p-2 text-subtle rounded-full hover:bg-card-secondary hover:text-muted focus:outline-none focus:ring-2 ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
-                                title="Find a new resource if this link is broken"
-                                aria-label="Find a new resource"
-                            >
-                                {replacingResourceIndex === index ? <LoadingSpinnerIcon /> : <RefreshIcon />}
-                            </button>
-                        </div>
-                    </li>
-                ))}
-                {(!entry.suggestedResources || entry.suggestedResources.length === 0) && (
-                    <p className="text-sm text-subtle">No additional resources suggested for this week.</p>
-                )}
-            </ul>
-        </InfoCard>
 
         <InfoCard 
           title="Weekly Prayer" 
@@ -782,58 +829,6 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
         </InfoCard>
         
         <GuidedMeditation entry={entry} onShowToast={onShowToast} />
-
-        <InfoCard title={`Song for the Soul: "${entry.songTitle}"`} icon={<MusicNoteIcon />}>
-            <p className="text-sm text-muted mb-4">
-                Listen to the specially composed song for this week's theme of '{entry.theme}'. Available on major music platforms for $0.99.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3">
-                 <a 
-                    href={entry.songLinks.spotify}
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex-1 text-center px-4 py-2 bg-green-600 text-white font-semibold rounded-md hover:bg-green-700 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
-                >
-                    Listen on Spotify
-                </a>
-                <a 
-                    href={entry.songLinks.appleMusic}
-                    target="_blank" 
-                    rel="noopener noreferrer"
-                    className="flex-1 text-center px-4 py-2 bg-black text-white font-semibold rounded-md hover:bg-gray-800 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
-                >
-                    Listen on Apple Music
-                </a>
-                 <button
-                    onClick={() => setQrCodeData({ url: entry.songLinks.spotify, title: entry.songTitle })}
-                    className="flex-1 text-center px-4 py-2 bg-card-secondary text-main font-semibold rounded-md hover:bg-primary-light transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary"
-                >
-                    Show QR Code
-                </button>
-            </div>
-            <div className="mt-6 pt-6 border-t border-default">
-                <h4 className="text-base font-semibold text-main mb-2">Song Lyrics</h4>
-                {!lyrics && (
-                    <>
-                        <p className="text-sm text-muted mb-4">Generate AI-powered lyrics for this week's song to deepen your reflection.</p>
-                        <button
-                            onClick={() => onGenerateLyrics(entry.week, entry)}
-                            disabled={isGeneratingLyrics}
-                            className="flex items-center justify-center w-full sm:w-auto px-4 py-2 text-sm bg-primary text-on-primary rounded-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 ring-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                        >
-                            {isGeneratingLyrics ? (
-                                <><LoadingSpinnerIcon /> <span className="ml-2">Generating Lyrics...</span></>
-                            ) : "Generate Lyrics"}
-                        </button>
-                    </>
-                )}
-                {lyrics && (
-                    <div className="mt-4 p-4 bg-card-secondary rounded-md max-h-60 overflow-y-auto animate-fade-in">
-                        <p className="whitespace-pre-wrap text-main leading-relaxed">{lyrics}</p>
-                    </div>
-                )}
-            </div>
-        </InfoCard>
       </div>
       
       {entry && (
@@ -843,14 +838,9 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
           entry={entry}
           responses={responses}
           imageUrl={imageUrl}
-        />
-      )}
-       {qrCodeData && (
-        <QRCodeModal
-            isOpen={!!qrCodeData}
-            onClose={() => setQrCodeData(null)}
-            url={qrCodeData.url}
-            title={qrCodeData.title}
+          allThemes={allThemes}
+          allResponses={allResponses}
+          allImages={allImages}
         />
       )}
     </>

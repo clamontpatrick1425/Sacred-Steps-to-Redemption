@@ -1,6 +1,7 @@
+
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { generateJournalContent, findReplacementResource, generateReflectiveImage, createChatSession, moderatePrayerWallSubmission, generateDailyAffirmation, generateSongLyrics, generatePodcastScript, generateSpeech } from './services/geminiService';
-import type { WeeklyTheme, SavedEntries, JournalResponses, UndoAction, GratitudeEntry, ToastMessage, SuggestedResource, AppTheme, AppFontSize, ChatMessage, PrayerWallEntry, DailyAffirmation, SavedLyrics, SavedPodcasts } from './types';
+import { generateJournalContent, generateReflectiveImage, createChatSession, moderatePrayerWallSubmission, generateDailyAffirmation, generateSongLyrics, generatePodcastScript, generateSpeech } from './services/geminiService';
+import type { WeeklyTheme, SavedEntries, JournalResponses, UndoAction, GratitudeEntry, ToastMessage, AppTheme, AppFontSize, ChatMessage, PrayerWallEntry, DailyAffirmation, SavedLyrics, SavedPodcasts } from './types';
 import { Header } from './components/Header';
 import { JournalEntry } from './components/JournalEntry';
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -29,6 +30,11 @@ import { ShareCardModal } from './components/ShareCardModal';
 import { JourneyMap } from './components/JourneyMap';
 import { JourneyMapModal } from './components/JourneyMapModal';
 import { GoalReflectionModal } from './components/GoalReflectionModal';
+import { AuthModal } from './components/AuthModal';
+import { PinLock } from './components/PinLock';
+import { SOSModal } from './components/SOSModal';
+import { TriggerTracker } from './components/TriggerTracker';
+import { auth, onAuthStateChanged, signOut } from './firebase';
 import type { Chat } from '@google/genai';
 
 
@@ -56,7 +62,7 @@ const InstagramIcon = () => (
         <stop offset="1" stopColor="#C13584" />
       </radialGradient>
     </defs>
-    <path fill="url(#ig-grad)" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.85s-.011 3.584-.069 4.85c-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07s-3.584-.012-4.85-.07c-3.252-.148-4.771-1.691-4.919-4.919-.058-1.265-.069-1.645-.069-4.85s.011-3.584.069-4.85c.149-3.225 1.664-4.771 4.919-4.919 1.266-.058 1.644.07 4.85.07zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948s.014 3.667.072 4.947c.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072s3.667-.014 4.947-.072c4.358-.2 6.78-2.618 6.98-6.98.059-1.281.073-1.689.073-4.948s-.014-3.667-.072-4.947c-.2-4.358-2.618-6.78-6.98-6.98-1.281-.058-1.689-.072-4.948-.072zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.162 6.162 6.162 6.162-2.759 6.162-6.162-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4s1.791-4 4-4 4 1.79 4 4-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+    <path fill="url(#ig-grad)" d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.85s-.011 3.584-.069 4.85c-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07s-3.584-.012-4.85-.07c-3.252-.148-4.771-1.691-4.919-4.919-.058-1.265-.069-1.645-.069-4.85s.011-3.584.069-4.85c.149-3.225 1.664-4.771 4.919-4.919 1.266-.058 1.644.07 4.85.07zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948s.014 3.667.072 4.947c.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072s3.667-.014 4.947-.072c4.358-.2 6.78-2.618 6.98-6.98.059-1.281.073-1.689-.073-4.948s-.014-3.667-.072-4.947c-.2-4.358-2.618-6.78-6.98-6.98-1.281-.058-1.689-.072-4.948-.072zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.162 6.162 6.162 6.162-2.759 6.162-6.162-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4s1.791-4 4-4 4 1.79 4 4-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
   </svg>
 );
 
@@ -92,6 +98,17 @@ const App: React.FC = () => {
   });
   const [fontSize, setFontSize] = useState<AppFontSize>('base');
   const [isFocusMode, setIsFocusMode] = useState(false);
+
+  // Auth State
+  const [user, setUser] = useState<{ name: string; email: string; uid?: string } | null>(null);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+
+  // New Feature States
+  const [isPinLockOpen, setIsPinLockOpen] = useState(false);
+  const [isSettingPin, setIsSettingPin] = useState(false);
+  const [isSOSOpen, setIsSOSOpen] = useState(false);
+  const [isTriggerTrackerOpen, setIsTriggerTrackerOpen] = useState(false);
 
   // AI Feature States
   const [isChatOpen, setIsChatOpen] = useState(false);
@@ -242,6 +259,27 @@ const App: React.FC = () => {
   useEffect(() => {
     const savedFontSize = localStorage.getItem('appFontSize') as AppFontSize | null;
     if (savedFontSize) setFontSize(savedFontSize);
+
+    const savedPin = localStorage.getItem('privacyPin');
+    if (savedPin) {
+      setIsPinLockOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+      if (firebaseUser) {
+        setUser({
+          name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
+          email: firebaseUser.email || '',
+          uid: firebaseUser.uid
+        });
+      } else {
+        setUser(null);
+      }
+      setIsAuthReady(true);
+    });
+    return () => unsubscribe();
   }, []);
 
   // Effect to save and apply theme
@@ -327,8 +365,20 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
+      const cachedThemes = localStorage.getItem('journalThemes');
+      if (cachedThemes) {
+        setThemes(JSON.parse(cachedThemes));
+        if (!chatRef.current) {
+          chatRef.current = createChatSession();
+        }
+        setIsLoading(false);
+        return;
+      }
+
       const content = await generateJournalContent();
       setThemes(content);
+      localStorage.setItem('journalThemes', JSON.stringify(content));
+      
       // Initialize chat session after content is loaded
       if (!chatRef.current) {
           chatRef.current = createChatSession();
@@ -337,7 +387,7 @@ const App: React.FC = () => {
       if (err instanceof Error) {
         setError(err.message);
       } else {
-        setError('An unknown error occurred.');
+        setError('An unknown error occurred while loading journal content. Please check your connection and API key.');
       }
     } finally {
       setIsLoading(false);
@@ -412,6 +462,19 @@ const App: React.FC = () => {
         setToast(null);
     }, 5000);
   }, []);
+
+  const handleLogin = (loggedInUser: { name: string; email: string }) => {
+    showToast(`Welcome back, ${loggedInUser.name}!`, 'success');
+  };
+
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      showToast("You have been logged out.", 'info');
+    } catch (err) {
+      showToast("Failed to log out.", 'error');
+    }
+  };
 
 
   const handleWeekChange = (newWeek: number) => {
@@ -588,32 +651,6 @@ const App: React.FC = () => {
   };
 
 
-  const handleReplaceResource = async (week: number, resourceIndex: number, brokenResource: SuggestedResource) => {
-    const themeToUpdate = themes.find(t => t.week === week);
-    if (!themeToUpdate) return;
-
-    try {
-        const newResource = await findReplacementResource(themeToUpdate, brokenResource);
-        setThemes(prevThemes =>
-            prevThemes.map(theme => {
-                if (theme.week === week) {
-                    const updatedResources = [...theme.suggestedResources];
-                    updatedResources[resourceIndex] = newResource;
-                    return { ...theme, suggestedResources: updatedResources };
-                }
-                return theme;
-            })
-        );
-        showToast("Resource has been updated!", 'success');
-    } catch (error) {
-        if (error instanceof Error) {
-            showToast(error.message, 'error');
-        } else {
-            showToast("An unknown error occurred.", 'error');
-        }
-    }
-  };
-
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) {
       return [];
@@ -776,7 +813,6 @@ const App: React.FC = () => {
               responses={currentResponses}
               onResponseChange={handleResponseChange}
               onShowToast={showToast}
-              onReplaceResource={handleReplaceResource}
               isFocusMode={isFocusMode}
               onToggleFocusMode={() => setIsFocusMode(prev => !prev)}
               imageUrl={generatedImages[currentWeek] || null}
@@ -791,6 +827,11 @@ const App: React.FC = () => {
               podcast={savedPodcasts[currentWeek] || null}
               isGeneratingPodcast={isGeneratingPodcastForWeek === currentWeek}
               onGeneratePodcast={handleGeneratePodcast}
+              lastChange={lastChange}
+              onUndo={handleUndo}
+              allThemes={themes}
+              allResponses={savedEntries}
+              allImages={generatedImages}
             />
           </main>
         </div>
@@ -799,10 +840,23 @@ const App: React.FC = () => {
     return null;
   };
 
+  if (!isAuthReady) {
+    return <div className="min-h-screen flex items-center justify-center"><LoadingSpinner /></div>;
+  }
+
+  if (isPinLockOpen && !isSettingPin) {
+    return <PinLock onUnlock={() => setIsPinLockOpen(false)} />;
+  }
+
   return (
     <div className="min-h-screen bg-background text-main">
       <Header 
         onOpenSettings={() => setIsSettingsOpen(true)}
+        user={user}
+        onLoginClick={() => setIsAuthModalOpen(true)}
+        onLogoutClick={handleLogout}
+        onSOSClick={() => setIsSOSOpen(true)}
+        onTriggerClick={() => setIsTriggerTrackerOpen(true)}
       />
       <div className="container mx-auto p-4 md:p-8">
         {renderContent()}
@@ -838,6 +892,7 @@ const App: React.FC = () => {
         onThemeChange={setTheme}
         currentFontSize={fontSize}
         onFontSizeChange={setFontSize}
+        onSetPinLock={() => setIsSettingPin(true)}
       />
       {shareableContent && (
         <ShareCardModal 
@@ -884,6 +939,31 @@ const App: React.FC = () => {
             goal={goalReflectionNeeded.goal}
             week={goalReflectionNeeded.week}
             onSubmit={handleGoalReflectionSubmit}
+        />
+      )}
+      <AuthModal 
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onLogin={handleLogin}
+      />
+      <SOSModal 
+        isOpen={isSOSOpen}
+        onClose={() => setIsSOSOpen(false)}
+      />
+      <TriggerTracker 
+        isOpen={isTriggerTrackerOpen}
+        onClose={() => setIsTriggerTrackerOpen(false)}
+      />
+      {isSettingPin && (
+        <PinLock 
+          isSettingPin={true}
+          onSetPin={(pin) => {
+            localStorage.setItem('privacyPin', pin);
+            setIsSettingPin(false);
+            showToast('Privacy PIN set successfully.', 'success');
+          }}
+          onCancel={() => setIsSettingPin(false)}
+          onUnlock={() => {}}
         />
       )}
     </div>

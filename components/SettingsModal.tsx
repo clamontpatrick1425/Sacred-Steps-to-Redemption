@@ -8,6 +8,7 @@ interface SettingsModalProps {
   onThemeChange: (theme: AppTheme) => void;
   currentFontSize: AppFontSize;
   onFontSizeChange: (size: AppFontSize) => void;
+  onSetPinLock?: () => void;
 }
 
 const fontSizes: { id: AppFontSize; name: string }[] = [
@@ -23,21 +24,29 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
   onThemeChange,
   currentFontSize,
   onFontSizeChange,
+  onSetPinLock,
 }) => {
   if (!isOpen) return null;
 
   const isDarkMode = currentTheme === 'dark';
+  const hasPin = !!localStorage.getItem('privacyPin');
 
   const handleThemeToggle = () => {
     // Toggles between 'dark' and the default light theme 'sky'
     onThemeChange(isDarkMode ? 'sky' : 'dark');
   };
 
+  const handleRemovePin = () => {
+    localStorage.removeItem('privacyPin');
+    // Force re-render or notify user
+    alert('Privacy PIN removed.');
+  };
+
   return (
     <div className="no-print fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
       <div className="bg-card rounded-lg shadow-2xl max-w-md w-full flex flex-col animate-fade-in">
         <header className="flex items-center justify-between p-4 border-b border-default">
-          <h3 className="text-2xl font-semibold text-main">Appearance Settings</h3>
+          <h3 className="text-2xl font-semibold text-main">Settings</h3>
           <button onClick={onClose} className="text-muted hover:text-main transition-colors" aria-label="Close settings dialog">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -83,6 +92,34 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({
               ))}
             </div>
           </div>
+
+          {/* Privacy Settings */}
+          {onSetPinLock && (
+            <div>
+              <h4 className="text-sm font-medium text-muted mb-3">Privacy</h4>
+              <div className="bg-card-secondary p-3 rounded-lg flex justify-between items-center">
+                <span className="text-main">Journal PIN Lock</span>
+                {hasPin ? (
+                  <button 
+                    onClick={handleRemovePin}
+                    className="text-sm text-red-500 hover:text-red-600 font-medium px-3 py-1 border border-red-200 rounded-md hover:bg-red-50 transition-colors"
+                  >
+                    Remove PIN
+                  </button>
+                ) : (
+                  <button 
+                    onClick={() => {
+                      onClose();
+                      onSetPinLock();
+                    }}
+                    className="text-sm text-primary hover:text-primary-hover font-medium px-3 py-1 border border-primary-light rounded-md hover:bg-primary-light transition-colors"
+                  >
+                    Set PIN
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
         </div>
         
         <footer className="flex items-center justify-end p-4 border-t border-default bg-card-secondary rounded-b-lg">

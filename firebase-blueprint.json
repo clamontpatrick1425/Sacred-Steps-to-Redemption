@@ -1,0 +1,73 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "A user of the Sacred Steps app",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "email": { "type": "string", "format": "email" },
+        "name": { "type": "string" },
+        "pinLock": { "type": "string", "description": "Hashed or plain 4-digit PIN" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "name"]
+    },
+    "JournalEntry": {
+      "title": "JournalEntry",
+      "description": "A saved journal entry for a specific week",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "week": { "type": "number" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "week", "content", "createdAt"]
+    },
+    "TriggerLog": {
+      "title": "TriggerLog",
+      "description": "A log of a craving or trigger",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "intensity": { "type": "number", "description": "1 to 10 scale" },
+        "trigger": { "type": "string" },
+        "copingMechanism": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "intensity", "trigger", "createdAt"]
+    },
+    "PrayerWallEntry": {
+      "title": "PrayerWallEntry",
+      "description": "A public prayer request",
+      "type": "object",
+      "properties": {
+        "authorUid": { "type": "string" },
+        "authorName": { "type": "string" },
+        "content": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "likes": { "type": "number" }
+      },
+      "required": ["authorUid", "authorName", "content", "createdAt", "likes"]
+    }
+  },
+  "firestore": {
+    "users/{userId}": {
+      "schema": { "$ref": "#/entities/User" },
+      "description": "User profiles"
+    },
+    "journalEntries/{entryId}": {
+      "schema": { "$ref": "#/entities/JournalEntry" },
+      "description": "User journal entries"
+    },
+    "triggers/{triggerId}": {
+      "schema": { "$ref": "#/entities/TriggerLog" },
+      "description": "User trigger logs"
+    },
+    "prayerWall/{prayerId}": {
+      "schema": { "$ref": "#/entities/PrayerWallEntry" },
+      "description": "Public prayer wall"
+    }
+  }
+}

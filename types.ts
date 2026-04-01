@@ -1,11 +1,5 @@
 
 
-export interface SuggestedResource {
-  title: string;
-  url: string;
-  type: 'video' | 'article' | 'audio';
-}
-
 export interface WeeklyTheme {
   week: number;
   theme: string;
@@ -21,7 +15,6 @@ export interface WeeklyTheme {
     author: string;
   };
   prayer: string;
-  suggestedResources: SuggestedResource[];
   songTitle: string;
   songLinks: {
     spotify: string;
