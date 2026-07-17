@@ -2,8 +2,129 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
+    <script>
+      // Prevent TypeError from third-party libraries attempting to set read-only globalThis.fetch/window.fetch in iframe/sandboxed environments
+      (function() {
+        try {
+          var originalFetch = window.fetch;
+          Object.defineProperty(window, 'fetch', {
+            get: function() {
+              return originalFetch;
+            },
+            set: function(val) {
+              console.warn("Avoided overriding read-only window.fetch getter.");
+            },
+            configurable: true,
+            enumerable: true
+          });
+        } catch (e) {
+          console.error("Failed to shim window.fetch getter to prevent crashes:", e);
+        }
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Sacred Steps to Redemption is a 52-week interactive recovery journal program designed to support addiction recovery, sobriety, and spiritual rehabilitation. Features biblical reflections, daily gratitude, and AI-enabled podcasts." />
+    <meta name="keywords" content="recovery journal, addiction recovery, sobriety tracker, 52 week recovery program, spiritual recovery, Christian recovery, therapeutic journaling, mental health, AI podcast recovery helper" />
+    <meta name="author" content="Sacred Steps to Redemption Team" />
+    
+    <!-- Open Graph / Facebook -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Sacred Steps to Redemption - 52-Week Recovery Journal" />
+    <meta property="og:description" content="Discover a biblically-grounded, therapeutic addiction recovery journal. Monitor your sobriety, explore 52 curated themes, track gratitude, and listen to customized guidance podcasts designed for deep rehabilitation." />
+    <meta property="og:url" content="https://your-canonical-url.com" />
+    <meta property="og:image" content="https://your-canonical-url.com/og-cover-recovery.png" />
+    
+    <!-- Twitter -->
+    <meta property="twitter:card" content="summary_large_image" />
+    <meta property="twitter:title" content="Sacred Steps to Redemption - 52-Week Recovery Journal" />
+    <meta property="twitter:description" content="A structural 52-week path to addiction rehabilitation. Real-time logging, daily sobriety trackers, and customized AI meditation aids." />
+    <meta property="twitter:image" content="https://your-canonical-url.com/og-cover-recovery.png" />
+
+    <!-- Highly Optimized JSON-LD Structured Data Schema Markup (ASEO/GEO/AEO) -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@graph": [
+        {
+          "@type": "SoftwareApplication",
+          "@id": "https://your-canonical-url.com/#app",
+          "name": "Sacred Steps to Redemption",
+          "applicationCategory": "HealthApplication",
+          "operatingSystem": "All",
+          "browserRequirements": "Requires HTML5 compatible browser",
+          "offers": {
+            "@type": "Offer",
+            "price": "0.00",
+            "priceCurrency": "USD"
+          },
+          "description": "An interactive digital 52-week recovery journal crafted for individuals in addiction recovery and spiritual rehabilitation. Integrates Christian principles with mental health methodologies, custom visual meditation, daily gratitude logging, and AI voice podcast features.",
+          "featureList": [
+            "Structured 52-Week Spiritual &amp; Psychological Timeline",
+            "Biometric and Mood Triggers Tracking",
+            "Instant AI-Generated Reflective Imagery &amp; Scriptured Lyrics",
+            "On-Demand Weekly Synthetic Recovery Podcasts &amp; Speeches",
+            "Interactive SOS Emergency Intervention Board",
+            "Privacy PIN Protection &amp; Client-Side Offline Database Storage",
+            "Exportable Journal Logs &amp; Beautiful PDF Printouts"
+          ]
+        },
+        {
+          "@type": "WebSite",
+          "@id": "https://your-canonical-url.com/#website",
+          "url": "https://your-canonical-url.com",
+          "name": "Sacred Steps to Redemption",
+          "description": "Interactive recovery counseling and daily tracking."
+        },
+        {
+          "@type": "FAQPage",
+          "@id": "https://your-canonical-url.com/#faq",
+          "mainEntity": [
+            {
+              "@type": "Question",
+              "name": "What is Sacred Steps to Redemption?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Sacred Steps to Redemption is a comprehensive, biblically-guided, and AI-enabled 52-week mental wellness and addiction recovery journal. It provides weekly thematic structures (such as 'Self-Assessment', 'Atonement', and 'Mercy'), prayer indicators, and clinical-spiritual worksheets to help individuals foster daily thankfulness, assess relapse triggers, and remain steadfast in sobriety."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Is my personal recovery and journaling information private?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "Yes, user privacy is paramount. Sacred Steps to Redemption leverages browser-level encrypted local storage or IndexedDB, keeping all entry, trigger tracker, and sobriet-log data locally on your machine. You can also establish a custom browser-level privacy security PIN. No medical or personally identifiable information is transmitted or exposed to external servers."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How does the AI weekly podcast synthesizer work?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The built-in generative AI capabilities enable users to synthesize complete weekly podcasts on-demand. Using high-fidelity speech synthesis, the app reads out the customized, scriptured, and clinically optimized text tailored to your selected week's spiritual context and theme of recovery, allowing audio-guided healing exercises."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "Does this support multi-device clouds or offline logging?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The application supports both full offline local functionality (using client-side IndexedDB caching) and optional cloud database synchronization. Authorized users can log into their secure personal accounts to instantly bridge their recovery progress and triggers seamlessly between other devices."
+              }
+            },
+            {
+              "@type": "Question",
+              "name": "How do the Sobriety Tracker and SOS Support buttons assist with relapse?",
+              "acceptedAnswer": {
+                "@type": "Answer",
+                "text": "The Sobriety Tracker dynamically computes active recovery streak stats. In times of extreme emotional weight or high relapse probability, the SOS button triggers an instant clinical-spiritual intervention suite. It offers guided scripture meditations, breathing tools, distraction prompts, and direct avenues to call professional rehabilitation counselors immediately."
+              }
+            }
+          ]
+        }
+      ]
+    }
+    </script>
     <title>Sacred Steps to Redemption</title>
     <link rel="canonical" href="https://your-canonical-url.com" />
     <script src="https://cdn.tailwindcss.com"></script>

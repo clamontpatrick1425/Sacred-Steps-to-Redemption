@@ -170,7 +170,7 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({ isOpen, on
                     <p className="mt-2 text-slate-600">{t.explanation}</p>
                     {img && (
                       <div className="mt-4">
-                        <img src={img} alt={`Reflective art for ${t.theme}`} className="w-full max-w-md mx-auto rounded-lg shadow-md" />
+                        <img src={img} alt={`Reflective art for ${t.theme}`} referrerPolicy="no-referrer" className="w-full max-w-md mx-auto rounded-lg shadow-md" />
                       </div>
                     )}
                   </header>

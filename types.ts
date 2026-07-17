@@ -62,25 +62,6 @@ export interface ToastMessage {
 export type AppTheme = 'sky' | 'dark';
 export type AppFontSize = 'sm' | 'base' | 'lg';
 
-export interface ChatMessage {
-  id: number;
-  role: 'user' | 'model';
-  text: string;
-}
-
-export interface PrayerWallEntry {
-  id: number;
-  text: string;
-  prayers: number;
-  timestamp: number;
-}
-
-export interface DailyAffirmation {
-  text: string;
-  date: string; // YYYY-MM-DD
-  week: number;
-}
-
 export interface EmotionDataPoint {
   week: number;
   emotions: { [key: string]: number }; // e.g., { hope: 7, gratitude: 8, struggle: 3 }

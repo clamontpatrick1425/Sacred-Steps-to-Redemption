@@ -34,7 +34,13 @@ const TriggerIcon = () => (
     </svg>
 );
 
-export const Header: React.FC<HeaderProps> = ({ onOpenSettings, user, onLoginClick, onLogoutClick, onSOSClick, onTriggerClick }) => (
+export const Header: React.FC<HeaderProps> = ({ onOpenSettings, user, onLoginClick, onLogoutClick, onSOSClick, onTriggerClick }) => {
+  const hour = new Date().getHours();
+  let greeting = 'Good evening';
+  if (hour < 12) greeting = 'Good morning';
+  else if (hour < 18) greeting = 'Good afternoon';
+
+  return (
   <header className="relative text-center py-8 px-4 bg-card shadow-md">
     <div className="absolute top-4 left-4 flex items-center space-x-2">
         <button
@@ -57,7 +63,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings, user, onLoginCli
     <div className="absolute top-4 right-4 flex items-center space-x-3">
         {user ? (
             <div className="flex items-center space-x-3 mr-1 bg-card-secondary px-3 py-1.5 rounded-full border border-default">
-                <span className="text-sm font-medium text-main hidden sm:inline-block">Hi, {user.name}</span>
+                <span className="text-sm font-medium text-main hidden sm:inline-block">{greeting}, {user.name}</span>
                  <button 
                     onClick={onLogoutClick} 
                     className="text-sm text-muted hover:text-red-500 transition-colors focus:outline-none font-medium"
@@ -90,4 +96,5 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings, user, onLoginCli
         <p className="mt-2 text-lg text-muted">A 52-Week Journey of Reflection and Gratitude</p>
     </div>
   </header>
-);
+  );
+};

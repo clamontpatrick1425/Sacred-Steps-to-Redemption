@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { generateJournalContent, generateReflectiveImage, createChatSession, moderatePrayerWallSubmission, generateDailyAffirmation, generateSongLyrics, generatePodcastScript, generateSpeech } from './services/geminiService';
-import type { WeeklyTheme, SavedEntries, JournalResponses, UndoAction, GratitudeEntry, ToastMessage, AppTheme, AppFontSize, ChatMessage, PrayerWallEntry, DailyAffirmation, SavedLyrics, SavedPodcasts } from './types';
+import { generateJournalContent, generateReflectiveImage, generateSongLyrics, generatePodcastScript, generateSpeech, getFallbackRecoveryImage } from './services/geminiService';
+import type { WeeklyTheme, SavedEntries, JournalResponses, UndoAction, GratitudeEntry, ToastMessage, AppTheme, AppFontSize, SavedLyrics, SavedPodcasts } from './types';
 import { Header } from './components/Header';
 import { JournalEntry } from './components/JournalEntry';
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -19,27 +19,21 @@ import { MilestoneCard } from './components/MilestoneCard';
 import { NotificationToast } from './components/NotificationToast';
 import { SettingsModal } from './components/SettingsModal';
 import { StreakTracker } from './components/StreakTracker';
-import { ChatFAB } from './components/ChatFAB';
-import { SpiritualGuideChat } from './components/SpiritualGuideChat';
 import { InteractiveParable } from './components/InteractiveParable';
 import { ParablePlayerModal } from './components/ParablePlayerModal';
-import { PrayerWall } from './components/PrayerWall';
-import { PrayerWallModal } from './components/PrayerWallModal';
-import { DailyAffirmationCard } from './components/DailyAffirmationCard';
-import { ShareCardModal } from './components/ShareCardModal';
-import { JourneyMap } from './components/JourneyMap';
-import { JourneyMapModal } from './components/JourneyMapModal';
-import { GoalReflectionModal } from './components/GoalReflectionModal';
 import { AuthModal } from './components/AuthModal';
 import { PinLock } from './components/PinLock';
 import { SOSModal } from './components/SOSModal';
 import { TriggerTracker } from './components/TriggerTracker';
+import { MoodTracker } from './components/MoodTracker';
+import { MeditationTimer } from './components/MeditationTimer';
+import { RedemptionDashboard } from './components/RedemptionDashboard';
+import { RecoverySEOFAQSection } from './components/RecoverySEOFAQSection';
 import { auth, onAuthStateChanged, signOut } from './firebase';
-import type { Chat } from '@google/genai';
-
+import { syncJournalEntries, syncUserProfile, saveJournalDocToCloud } from './utils/syncHelper';
+import { getAllPodcasts, savePodcast } from './utils/podcastDb';
 
 const MILESTONES = [4, 13, 26, 52];
-const KAIROS_GREETING = { id: Date.now(), role: 'model' as const, text: "Grace and peace to you. I am Kairos, your spiritual guide. How can I support you on your journey today?" };
 
 const FacebookIcon = () => (
   <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="#1877F2" className="h-12 w-12">
@@ -81,10 +75,10 @@ const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [lastChange, setLastChange] = useState<UndoAction | null>(null);
   const undoTimerRef = useRef<number | null>(null);
+  const hasSyncedRef = useRef<string | null>(null);
   const [randomGratitude, setRandomGratitude] = useState<GratitudeEntry | null>(null);
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const toastTimerRef = useRef<number | null>(null);
-  const [shareableContent, setShareableContent] = useState<{ text: string, source: string } | null>(null);
 
   // New states for personalization and focus mode
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -103,6 +97,8 @@ const App: React.FC = () => {
   const [user, setUser] = useState<{ name: string; email: string; uid?: string } | null>(null);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isAuthReady, setIsAuthReady] = useState(false);
+  const [isDashboardOpen, setIsDashboardOpen] = useState(false);
+  const [isSyncing, setIsSyncing] = useState(false);
 
   // New Feature States
   const [isPinLockOpen, setIsPinLockOpen] = useState(false);
@@ -111,15 +107,8 @@ const App: React.FC = () => {
   const [isTriggerTrackerOpen, setIsTriggerTrackerOpen] = useState(false);
 
   // AI Feature States
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const chatRef = useRef<Chat | null>(null);
   const [generatingImageForWeek, setGeneratingImageForWeek] = useState<number | null>(null);
   const [isParableModalOpen, setIsParableModalOpen] = useState(false);
-  const [isPrayerWallOpen, setIsPrayerWallOpen] = useState(false);
-  const [isJourneyMapOpen, setIsJourneyMapOpen] = useState(false);
-  const [dailyAffirmation, setDailyAffirmation] = useState<string | null>(null);
-  const [isLoadingAffirmation, setIsLoadingAffirmation] = useState<boolean>(true);
-  const [goalReflectionNeeded, setGoalReflectionNeeded] = useState<{ week: number; goal: string; } | null>(null);
   const [isGeneratingLyricsForWeek, setIsGeneratingLyricsForWeek] = useState<number | null>(null);
   const [isGeneratingPodcastForWeek, setIsGeneratingPodcastForWeek] = useState<number | null>(null);
 
@@ -175,36 +164,6 @@ const App: React.FC = () => {
     }
   });
   
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(() => {
-    try {
-      const storedMessages = localStorage.getItem('chatMessages');
-      if (storedMessages) {
-        const parsed = JSON.parse(storedMessages);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          return parsed;
-        }
-      }
-      return [KAIROS_GREETING];
-    } catch (e) {
-      console.error("Failed to parse chat messages from localStorage", e);
-      return [KAIROS_GREETING];
-    }
-  });
-
-  const [prayerWallEntries, setPrayerWallEntries] = useState<PrayerWallEntry[]>(() => {
-    try {
-        const storedPrayers = localStorage.getItem('prayerWallEntries');
-        if (storedPrayers) {
-            const parsed = JSON.parse(storedPrayers);
-            if (Array.isArray(parsed)) return parsed;
-        }
-        return [];
-    } catch (e) {
-        console.error("Failed to parse prayer wall entries from localStorage", e);
-        return [];
-    }
-  });
-
   const [savedLyrics, setSavedLyrics] = useState<SavedLyrics>(() => {
     try {
       const storedLyrics = localStorage.getItem('savedLyrics');
@@ -221,21 +180,42 @@ const App: React.FC = () => {
     }
   });
 
-  const [savedPodcasts, setSavedPodcasts] = useState<SavedPodcasts>(() => {
-    try {
-      const storedPodcasts = localStorage.getItem('savedPodcasts');
-      if (storedPodcasts) {
-        const parsed = JSON.parse(storedPodcasts);
-        if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
-          return parsed;
+  const [savedPodcasts, setSavedPodcasts] = useState<SavedPodcasts>({});
+
+  useEffect(() => {
+    let active = true;
+    const initPodcastsStore = async () => {
+      try {
+        const storedPodcasts = localStorage.getItem('savedPodcasts');
+        if (storedPodcasts) {
+          try {
+            const parsed = JSON.parse(storedPodcasts);
+            if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+              for (const [weekKey, base64Audio] of Object.entries(parsed)) {
+                if (base64Audio && typeof base64Audio === 'string') {
+                  await savePodcast(Number(weekKey), base64Audio);
+                }
+              }
+            }
+          } catch (migrationErr) {
+            console.error("Error migrating podcasts from localStorage to IndexedDB:", migrationErr);
+          }
+          localStorage.removeItem('savedPodcasts');
         }
+
+        const loadedPodcasts = await getAllPodcasts();
+        if (active) {
+          setSavedPodcasts(loadedPodcasts);
+        }
+      } catch (err) {
+        console.error("Exception in initPodcastsStore IndexedDB:", err);
       }
-      return {};
-    } catch (e) {
-      console.error("Failed to parse saved podcasts from localStorage", e);
-      return {};
-    }
-  });
+    };
+    initPodcastsStore();
+    return () => {
+      active = false;
+    };
+  }, []);
 
 
   // Fix: Safely parse data from localStorage to avoid type errors with `JSON.parse`.
@@ -267,20 +247,54 @@ const App: React.FC = () => {
   }, []);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       if (firebaseUser) {
-        setUser({
+        const u = {
           name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User',
           email: firebaseUser.email || '',
           uid: firebaseUser.uid
-        });
+        };
+        setUser(u);
+
+        if (hasSyncedRef.current !== firebaseUser.uid) {
+          hasSyncedRef.current = firebaseUser.uid;
+          setIsSyncing(true);
+          try {
+            // Two-way user profile sync
+            await syncUserProfile(
+              firebaseUser.uid,
+              u.email,
+              u.name,
+              localStorage.getItem('privacyPin'),
+              (pin) => {
+                if (pin) {
+                  setIsPinLockOpen(true);
+                }
+              }
+            );
+
+            // Two-way journal entry sync
+            await syncJournalEntries(firebaseUser.uid, savedEntries, (merged) => {
+              setSavedEntries(merged);
+            });
+
+            showToast(`Welcome ${u.name}! Your journey statistics have been compiled and secured on the cloud.`, 'success');
+          } catch (err) {
+            console.error("Failed to sync profile and journals with cloud database:", err);
+            showToast("Cloud connection is running in offline mode. Local copies are active.", 'info');
+          } finally {
+            setIsSyncing(false);
+          }
+        }
       } else {
         setUser(null);
+        hasSyncedRef.current = null;
+        setIsDashboardOpen(false);
       }
       setIsAuthReady(true);
     });
     return () => unsubscribe();
-  }, []);
+  }, [savedEntries]);
 
   // Effect to save and apply theme
   useEffect(() => {
@@ -318,25 +332,10 @@ const App: React.FC = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-        localStorage.setItem('chatMessages', JSON.stringify(chatMessages));
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [chatMessages]);
-
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
         localStorage.setItem('gratitudeEntries', JSON.stringify(gratitudeEntries));
     }, 1000);
     return () => clearTimeout(timer);
   }, [gratitudeEntries]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-        localStorage.setItem('prayerWallEntries', JSON.stringify(prayerWallEntries));
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [prayerWallEntries]);
 
 
   useEffect(() => {
@@ -353,36 +352,21 @@ const App: React.FC = () => {
     return () => clearTimeout(timer);
   }, [savedLyrics]);
 
-  useEffect(() => {
-    const timer = setTimeout(() => {
-        localStorage.setItem('savedPodcasts', JSON.stringify(savedPodcasts));
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [savedPodcasts]);
-
 
   const loadJournalContent = useCallback(async () => {
     setIsLoading(true);
     setError(null);
     try {
-      const cachedThemes = localStorage.getItem('journalThemes');
+      const cachedThemes = localStorage.getItem('journalThemes_v3');
       if (cachedThemes) {
         setThemes(JSON.parse(cachedThemes));
-        if (!chatRef.current) {
-          chatRef.current = createChatSession();
-        }
         setIsLoading(false);
         return;
       }
 
       const content = await generateJournalContent();
       setThemes(content);
-      localStorage.setItem('journalThemes', JSON.stringify(content));
-      
-      // Initialize chat session after content is loaded
-      if (!chatRef.current) {
-          chatRef.current = createChatSession();
-      }
+      localStorage.setItem('journalThemes_v3', JSON.stringify(content));
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -399,48 +383,6 @@ const App: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
   
-  // Daily Affirmation Logic
-  useEffect(() => {
-    const fetchAffirmation = async () => {
-        if (themes.length === 0) return;
-
-        setIsLoadingAffirmation(true);
-        const today = new Date().toISOString().split('T')[0];
-        const currentTheme = themes.find(t => t.week === currentWeek);
-
-        try {
-            const storedData = localStorage.getItem('dailyAffirmation');
-            if (storedData) {
-                const savedAffirmation: DailyAffirmation = JSON.parse(storedData);
-                if (savedAffirmation.date === today && savedAffirmation.week === currentWeek) {
-                    setDailyAffirmation(savedAffirmation.text);
-                    setIsLoadingAffirmation(false);
-                    return;
-                }
-            }
-            
-            if (currentTheme) {
-                const newAffirmationText = await generateDailyAffirmation(currentTheme.theme);
-                const newAffirmation: DailyAffirmation = {
-                    text: newAffirmationText,
-                    date: today,
-                    week: currentWeek,
-                };
-                localStorage.setItem('dailyAffirmation', JSON.stringify(newAffirmation));
-                setDailyAffirmation(newAffirmationText);
-            }
-        } catch (err) {
-            console.error("Failed to fetch daily affirmation", err);
-            // Don't show a toast for this, just fail silently.
-            setDailyAffirmation("Today, I am open to grace and healing.");
-        } finally {
-            setIsLoadingAffirmation(false);
-        }
-    };
-    fetchAffirmation();
-  }, [currentWeek, themes]);
-
-
   // Cleanup timers on component unmount
   useEffect(() => {
     return () => {
@@ -478,13 +420,6 @@ const App: React.FC = () => {
 
 
   const handleWeekChange = (newWeek: number) => {
-    const oldWeek = currentWeek;
-    if (newWeek !== oldWeek) {
-        const previousGoal = savedEntries[oldWeek]?.personalGoal;
-        if (previousGoal && !savedEntries[oldWeek]?.goalReflection) {
-            setGoalReflectionNeeded({ week: oldWeek, goal: previousGoal });
-        }
-    }
     setCurrentWeek(newWeek);
   };
   
@@ -498,13 +433,21 @@ const App: React.FC = () => {
       });
     }
 
+    const updatedWeekResponses = {
+      ...savedEntries[week],
+      [field]: value
+    };
+
     setSavedEntries(prev => ({
       ...prev,
-      [week]: {
-        ...prev[week],
-        [field]: value
-      }
+      [week]: updatedWeekResponses
     }));
+
+    if (auth.currentUser) {
+      saveJournalDocToCloud(auth.currentUser.uid, week, updatedWeekResponses).catch((err) => {
+        console.error("Cloud write failed during response change:", err);
+      });
+    }
     
     if (undoTimerRef.current) {
       clearTimeout(undoTimerRef.current);
@@ -521,13 +464,21 @@ const App: React.FC = () => {
 
     const { week, field, previousValue } = lastChange;
 
+    const updatedWeekResponses = {
+      ...savedEntries[week],
+      [field]: previousValue,
+    };
+
     setSavedEntries(prev => ({
       ...prev,
-      [week]: {
-        ...prev[week],
-        [field]: previousValue,
-      },
+      [week]: updatedWeekResponses,
     }));
+
+    if (auth.currentUser) {
+      saveJournalDocToCloud(auth.currentUser.uid, week, updatedWeekResponses).catch((err) => {
+        console.error("Cloud write failed during undo:", err);
+      });
+    }
 
     setLastChange(null);
     if (undoTimerRef.current) {
@@ -547,29 +498,6 @@ const App: React.FC = () => {
       setGratitudeEntries(prev => prev.filter(entry => entry.id !== id));
   };
 
-  const handleAddPrayer = async (text: string) => {
-    const isAppropriate = await moderatePrayerWallSubmission(text);
-    if (!isAppropriate) {
-        showToast("This submission was flagged as inappropriate and was not posted.", 'error');
-        return;
-    }
-    const newPrayer: PrayerWallEntry = {
-        id: Date.now(),
-        text,
-        prayers: 0,
-        timestamp: Date.now(),
-    };
-    setPrayerWallEntries(prev => [newPrayer, ...prev]);
-    showToast("Your prayer has been shared.", 'success');
-  };
-
-  const handlePrayForEntry = (id: number) => {
-    setPrayerWallEntries(prev => 
-        prev.map(entry => entry.id === id ? { ...entry, prayers: entry.prayers + 1 } : entry)
-    );
-  };
-
-
   const pickRandomGratitude = useCallback(() => {
     if (gratitudeEntries.length === 0) {
         setRandomGratitude(null);
@@ -587,21 +515,20 @@ const App: React.FC = () => {
     setCompletedMilestones(prev => [...new Set([...prev, milestone])]);
   };
   
-  const handleClearChat = () => {
-    setChatMessages([KAIROS_GREETING]);
-    // Re-initialize the chat session to clear its internal server-side history
-    chatRef.current = createChatSession();
-    showToast("Conversation cleared", 'info');
-  };
-
   const handleGenerateImage = async (week: number, promptText: string) => {
     setGeneratingImageForWeek(week);
     try {
-        const imageUrl = await generateReflectiveImage(promptText);
+        const imageUrl = await generateReflectiveImage(promptText, week);
         setGeneratedImages(prev => ({ ...prev, [week]: imageUrl }));
     } catch(err) {
         const message = err instanceof Error ? err.message : "An unknown error occurred.";
-        showToast(message, 'error');
+        if (message.includes("403") || message.includes("permission") || message.includes("API_KEY") || message.includes("unauthorized") || message.includes("Failed to generate")) {
+            const fallbackUrl = getFallbackRecoveryImage(week);
+            setGeneratedImages(prev => ({ ...prev, [week]: fallbackUrl }));
+            showToast("Custom AI generation requires a billing-enabled key in Settings > Secrets. Loaded a beautiful curated recovery landscape for you instead!", "info");
+        } else {
+            showToast(message, 'error');
+        }
     } finally {
         setGeneratingImageForWeek(null);
     }
@@ -634,6 +561,7 @@ const App: React.FC = () => {
     try {
         const script = await generatePodcastScript(theme);
         const audio = await generateSpeech(script);
+        await savePodcast(week, audio);
         setSavedPodcasts(prev => ({ ...prev, [week]: audio }));
         showToast("Your weekly podcast is ready!", "success");
     } catch (err) {
@@ -643,13 +571,6 @@ const App: React.FC = () => {
         setIsGeneratingPodcastForWeek(null);
     }
   };
-
-  const handleGoalReflectionSubmit = (week: number, reflection: string) => {
-    handleResponseChange(week, 'goalReflection', reflection);
-    setGoalReflectionNeeded(null);
-    showToast("Your goal reflection has been saved.", "success");
-  };
-
 
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) {
@@ -761,11 +682,40 @@ const App: React.FC = () => {
           {!isFocusMode && (
             <aside className="lg:col-span-3 transition-all duration-300 ease-in-out">
                <div className="sticky top-8 space-y-4">
+                  {user && (
+                    <div className="p-4 bg-card rounded-lg border border-default shadow-sm space-y-2.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-bold text-muted uppercase tracking-wider">Account Database</span>
+                        <span className="flex h-2 w-2 relative">
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isSyncing ? 'bg-amber-400' : 'bg-emerald-400'}`}></span>
+                          <span className={`relative inline-flex rounded-full h-2 w-2 ${isSyncing ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted leading-tight">
+                        Signed in as <strong className="text-main">{user.name}</strong> • Live synchronization is active.
+                      </p>
+                      <button
+                        onClick={() => setIsDashboardOpen(prev => !prev)}
+                        className={`w-full flex items-center justify-center space-x-1.5 py-2 px-3 rounded-md font-bold transition-all text-xs border cursor-pointer ${
+                          isDashboardOpen 
+                            ? 'bg-primary text-on-primary border-primary hover:bg-primary-hover shadow-sm' 
+                            : 'bg-card-secondary border-default text-main hover:bg-primary-light hover:border-primary/20'
+                        }`}
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                        </svg>
+                        <span>{isDashboardOpen ? 'Go Back to Weekly Journal' : 'View Compiled Insights'}</span>
+                      </button>
+                    </div>
+                  )}
                   <ProgressTracker 
                     completedWeeks={completedWeeksCount}
                     totalWeeks={themes.length || 52}
                   />
                   <StreakTracker streak={reflectionStreak} />
+                  <MoodTracker />
+                  <MeditationTimer />
                   <SearchBar
                     searchQuery={searchQuery}
                     onSearchChange={handleSearchChange}
@@ -791,48 +741,58 @@ const App: React.FC = () => {
                   />
                   <GratitudeWordCloud entries={gratitudeEntries} />
                   <VerseFinder />
-                  <JourneyMap onOpen={() => setIsJourneyMapOpen(true)} />
                   <InteractiveParable onStart={() => setIsParableModalOpen(true)} />
-                  <PrayerWall onOpen={() => setIsPrayerWallOpen(true)} />
                </div>
             </aside>
           )}
           <main className={`transition-all duration-300 ease-in-out ${isFocusMode ? 'lg:col-span-12' : 'lg:col-span-9'}`}>
-             {eligibleMilestone && !isFocusMode && milestoneData && (
-              <MilestoneCard
-                milestone={eligibleMilestone}
-                themes={milestoneData.themes}
-                savedEntries={milestoneData.entries}
-                gratitudeEntries={gratitudeEntries}
-                onSummaryGenerated={handleMilestoneSummaryGenerated}
-              />
-            )}
-            {!isFocusMode && <GratitudeReminder entry={randomGratitude} onShuffle={pickRandomGratitude} />}
-            <JournalEntry 
-              entry={selectedEntry} 
-              responses={currentResponses}
-              onResponseChange={handleResponseChange}
-              onShowToast={showToast}
-              isFocusMode={isFocusMode}
-              onToggleFocusMode={() => setIsFocusMode(prev => !prev)}
-              imageUrl={generatedImages[currentWeek] || null}
-              isGeneratingImage={generatingImageForWeek === currentWeek}
-              onGenerateImage={handleGenerateImage}
-              onShare={setShareableContent}
-              affirmation={dailyAffirmation}
-              isLoadingAffirmation={isLoadingAffirmation}
-              lyrics={savedLyrics[currentWeek] || null}
-              isGeneratingLyrics={isGeneratingLyricsForWeek === currentWeek}
-              onGenerateLyrics={handleGenerateLyrics}
-              podcast={savedPodcasts[currentWeek] || null}
-              isGeneratingPodcast={isGeneratingPodcastForWeek === currentWeek}
-              onGeneratePodcast={handleGeneratePodcast}
-              lastChange={lastChange}
-              onUndo={handleUndo}
-              allThemes={themes}
-              allResponses={savedEntries}
-              allImages={generatedImages}
-            />
+             {isDashboardOpen && user ? (
+               <RedemptionDashboard 
+                 user={user}
+                 savedEntries={savedEntries}
+                 completedWeeksCount={completedWeeksCount}
+                 reflectionStreak={reflectionStreak}
+                 completedMilestones={completedMilestones}
+                 gratitudeCount={gratitudeEntries.length}
+                 totalWeeks={themes.length || 52}
+                 onClose={() => setIsDashboardOpen(false)}
+               />
+             ) : (
+               <>
+                 {eligibleMilestone && !isFocusMode && milestoneData && (
+                  <MilestoneCard
+                    milestone={eligibleMilestone}
+                    themes={milestoneData.themes}
+                    savedEntries={milestoneData.entries}
+                    gratitudeEntries={gratitudeEntries}
+                    onSummaryGenerated={handleMilestoneSummaryGenerated}
+                  />
+                )}
+                {!isFocusMode && <GratitudeReminder entry={randomGratitude} onShuffle={pickRandomGratitude} />}
+                <JournalEntry 
+                  entry={selectedEntry} 
+                  responses={currentResponses}
+                  onResponseChange={handleResponseChange}
+                  onShowToast={showToast}
+                  isFocusMode={isFocusMode}
+                  onToggleFocusMode={() => setIsFocusMode(prev => !prev)}
+                  imageUrl={generatedImages[currentWeek] || null}
+                  isGeneratingImage={generatingImageForWeek === currentWeek}
+                  onGenerateImage={handleGenerateImage}
+                  lyrics={savedLyrics[currentWeek] || null}
+                  isGeneratingLyrics={isGeneratingLyricsForWeek === currentWeek}
+                  onGenerateLyrics={handleGenerateLyrics}
+                  podcast={savedPodcasts[currentWeek] || null}
+                  isGeneratingPodcast={isGeneratingPodcastForWeek === currentWeek}
+                  onGeneratePodcast={handleGeneratePodcast}
+                  lastChange={lastChange}
+                  onUndo={handleUndo}
+                  allThemes={themes}
+                  allResponses={savedEntries}
+                  allImages={generatedImages}
+                />
+               </>
+             )}
           </main>
         </div>
       );
@@ -860,6 +820,7 @@ const App: React.FC = () => {
       />
       <div className="container mx-auto p-4 md:p-8">
         {renderContent()}
+        <RecoverySEOFAQSection />
       </div>
        <footer className="text-center py-6 mt-8 border-t border-default">
         <p className="text-sm text-muted">
@@ -894,53 +855,11 @@ const App: React.FC = () => {
         onFontSizeChange={setFontSize}
         onSetPinLock={() => setIsSettingPin(true)}
       />
-      {shareableContent && (
-        <ShareCardModal 
-            isOpen={!!shareableContent}
-            onClose={() => setShareableContent(null)}
-            text={shareableContent.text}
-            source={shareableContent.source}
-        />
-      )}
-      <ChatFAB onOpen={() => setIsChatOpen(true)} />
-      <SpiritualGuideChat 
-        isOpen={isChatOpen}
-        onClose={() => setIsChatOpen(false)}
-        chat={chatRef.current}
-        messages={chatMessages}
-        setMessages={setChatMessages}
-        onClear={handleClearChat}
-        currentTheme={selectedEntry?.theme}
-      />
       <ParablePlayerModal
         isOpen={isParableModalOpen}
         onClose={() => setIsParableModalOpen(false)}
         onShowToast={showToast}
       />
-      <PrayerWallModal
-        isOpen={isPrayerWallOpen}
-        onClose={() => setIsPrayerWallOpen(false)}
-        entries={prayerWallEntries}
-        onAddPrayer={handleAddPrayer}
-        onPray={handlePrayForEntry}
-        onShowToast={showToast}
-      />
-      <JourneyMapModal
-        isOpen={isJourneyMapOpen}
-        onClose={() => setIsJourneyMapOpen(false)}
-        savedEntries={savedEntries}
-        themes={themes}
-        onShowToast={showToast}
-      />
-      {goalReflectionNeeded && (
-        <GoalReflectionModal
-            isOpen={!!goalReflectionNeeded}
-            onClose={() => setGoalReflectionNeeded(null)}
-            goal={goalReflectionNeeded.goal}
-            week={goalReflectionNeeded.week}
-            onSubmit={handleGoalReflectionSubmit}
-        />
-      )}
       <AuthModal 
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}

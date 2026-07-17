@@ -53,59 +53,11 @@ const journalSchema = {
   }
 };
 
+import { allWeeklyThemes } from '../journalThemesData';
+
 export const generateJournalContent = async (): Promise<WeeklyTheme[]> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set.");
-  }
-
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-  const prompt = `
-    Generate a complete 52-week journal for a program named 'Sacred Steps to Redemption', which is focused on battling addiction through Christian spirituality. 
-    The tone should be encouraging, hopeful, and centered on thankfulness and redemption. 
-    Each of the 52 weeks must include all of the following fields: 
-    - week: The week number (1-52).
-    - theme: A concise theme for the week (e.g., 'Honesty', 'Surrender', 'Gratitude').
-    - explanation: A brief paragraph explaining the theme's relevance to recovery.
-    - biblicalAspiration: A short, actionable spiritual goal based on biblical principles.
-    - prompt: A primary journaling prompt for the user to reflect on.
-    - bibleVerse: A relevant Bible verse citation (e.g., 'Philippians 4:13').
-    - bibleVerseText: The complete text of the Bible verse.
-    - reflectionQuestion1: A thought-provoking question related to the theme.
-    - reflectionQuestion2: A second, distinct reflection question.
-    - quote: An object containing an inspirational quote from a notable spiritual figure or author, with 'text' and 'author' fields. Ensure the author's name is always provided.
-    - prayer: A heartfelt weekly prayer under 2500 characters.
-    - songTitle: A creative, uplifting song title related to the week's theme.
-    - songLinks: An object with two keys: 'spotify' and 'appleMusic'. Use placeholder URLs for these, for example: 'https://open.spotify.com/track/placeholder123' and 'https://music.apple.com/us/album/placeholder/123'.
-    
-    Ensure the output is a JSON array containing exactly 52 unique weekly entries.
-  `;
-
-  try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3-pro-preview",
-      contents: prompt,
-      config: {
-        responseMimeType: "application/json",
-        responseSchema: journalSchema,
-        temperature: 0.7,
-      },
-    });
-
-    const jsonText = response.text.trim();
-    const data = JSON.parse(jsonText);
-    
-    if (!Array.isArray(data) || data.length === 0) {
-      throw new Error("API returned an empty or invalid array.");
-    }
-    
-    // Sort by week number to ensure order
-    return data.sort((a, b) => a.week - b.week);
-
-  } catch (error) {
-    console.error("Error generating journal content:", error);
-    throw new Error("Failed to fetch journal content from Gemini API.");
-  }
+  // Directly return the complete 52-week curriculum from our static file
+  return [...allWeeklyThemes];
 };
 
 export const generatePersonalPrayer = async (theme: WeeklyTheme, responses: Partial<JournalResponses>): Promise<string> => {
@@ -137,7 +89,7 @@ export const generatePersonalPrayer = async (theme: WeeklyTheme, responses: Part
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.5-flash",
       contents: prompt,
       config: {
         temperature: 0.8,
@@ -171,7 +123,7 @@ export const findVerseForFeeling = async (feeling: string): Promise<{ verse: str
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -196,7 +148,7 @@ export const generateSpeech = async (textToSpeak: string): Promise<string> => {
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash-preview-tts",
+      model: "gemini-3.1-flash-tts-preview",
       contents: [{ parts: [{ text: `Read the following in a calm, gentle, and clear voice: ${textToSpeak}` }] }],
       config: {
         responseModalities: [Modality.AUDIO],
@@ -268,7 +220,7 @@ export const generateMilestoneSummary = async (
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.5-flash",
       contents: prompt,
       config: {
         temperature: 0.8,
@@ -283,19 +235,64 @@ export const generateMilestoneSummary = async (
   }
 };
 
-export const generateReflectiveImage = async (promptText: string): Promise<string> => {
+export const getFallbackRecoveryImage = (week: number): string => {
+  const fallbacks = [
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80", // Yosemite River Dawn
+    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=80", // Forest Path rays
+    "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1200&q=80", // Misty lake mountains
+    "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=1200&q=80", // Forest stream rocks
+    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80", // Ocean Sunrise beach
+    "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=1200&q=80", // Sunlit green leaf
+    "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80", // Open country field tree
+    "https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1200&q=80", // Sunbeam leaves
+    "https://images.unsplash.com/photo-1475113548554-5a36f1f523d6?auto=format&fit=crop&w=1200&q=80", // Meadow clouds morning
+    "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=1200&q=80"  // Wood rings timeline
+  ];
+  const index = Math.abs(Math.floor(week)) % fallbacks.length;
+  return fallbacks[index];
+};
+
+export const generateReflectiveImage = async (promptText: string, week?: number): Promise<string> => {
   if (!process.env.API_KEY) {
     throw new Error("API_KEY environment variable not set.");
   }
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  const prompt = `An abstract digital painting inspired by the following concept: "${promptText}". Style: serene, hopeful, gentle, ethereal watercolor. Do not include any text or recognizable human figures. Focus on symbolic imagery and color to evoke the feeling of the concept.`;
+  
+  let prompt = `An abstract digital painting inspired by the following concept: "${promptText}". Style: serene, hopeful, gentle, ethereal watercolor. Do not include any text or recognizable human figures. Focus on symbolic imagery and color to evoke the feeling of the concept.`;
+
+  if (week === 1) {
+    const characters = [
+      "An East Asian female",
+      "An African American male",
+      "A Caucasian female",
+      "A Hispanic male",
+      "A South Asian female",
+      "A Middle Eastern male",
+      "An indigenous female",
+      "An African American female",
+      "A Hispanic female",
+      "A South Asian male"
+    ];
+    const chosenCharacter = characters[Math.floor(Math.random() * characters.length)];
+
+    prompt = `Core Visual Metaphor
+A quiet beginning: awareness, humility, and the recognition of light already present.
+
+Image Generation Prompt
+A serene early-morning landscape just after sunrise. Near the path, ${chosenCharacter} is sitting quietly, looking in active contemplation. Soft golden light filters through low clouds, illuminating a simple dirt path winding gently forward. Dew clings to tall grass, catching the light like small blessings. The scene feels still and reverent, as if the world is pausing to give thanks. No visible destination—only presence, peace, and quiet appreciation. Painterly realism, cinematic lighting, shallow depth of field, warm earth tones, contemplative mood.
+
+Negative Prompt
+No text, no religious symbols, no crosses, no churches, no dramatic skies, no people in distress, no darkness, no addiction imagery, no urban settings, no clutter, no neon colors, no surreal distortions.`;
+  }
   
   try {
     const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash-image',
+      model: 'gemini-3.1-flash-lite-image',
       contents: { parts: [{ text: prompt }] },
       config: {
-          responseModalities: [Modality.IMAGE],
+        imageConfig: {
+          aspectRatio: "4:3"
+        }
       },
     });
 
@@ -307,9 +304,14 @@ export const generateReflectiveImage = async (promptText: string): Promise<strin
     }
     throw new Error("No image data found in response.");
 
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error generating reflective image:", error);
-    throw new Error("Failed to generate reflective image. Please try again.");
+    const originalMsg = error?.message || String(error) || "";
+    const isPermission = originalMsg.toLowerCase().includes("permission") || originalMsg.toLowerCase().includes("403") || originalMsg.toLowerCase().includes("api_key") || originalMsg.toLowerCase().includes("unauthorized");
+    if (isPermission) {
+      throw new Error(`Permission Denied (403): ${originalMsg}`);
+    }
+    throw new Error(`Failed to generate reflective image: ${originalMsg}`);
   }
 };
 
@@ -336,7 +338,7 @@ export const generateDeeperReflectionPrompt = async (theme: WeeklyTheme, respons
     
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: prompt,
             config: { temperature: 0.75 },
         });
@@ -345,19 +347,6 @@ export const generateDeeperReflectionPrompt = async (theme: WeeklyTheme, respons
         console.error("Error generating deeper reflection prompt:", error);
         throw new Error("Failed to generate a deeper reflection prompt.");
     }
-};
-
-export const createChatSession = (): Chat => {
-    if (!process.env.API_KEY) {
-        throw new Error("API_KEY environment variable not set.");
-    }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    return ai.chats.create({
-        model: 'gemini-2.5-flash',
-        config: {
-            systemInstruction: "You are a gentle, wise, and encouraging spiritual guide for a person on a recovery journey from addiction using a Christian spiritual journal. Your name is 'Kairos', meaning a moment of divine opportunity. Respond with empathy, hope, and insight. Keep your responses concise and thoughtful, often referencing concepts of grace, redemption, and faith. When asked for clarification on biblical verses, provide context and meaning in a simple, understandable way.",
-        },
-    });
 };
 
 export const transcribeAudio = async (base64Audio: string, mimeType: string): Promise<string> => {
@@ -377,7 +366,7 @@ export const transcribeAudio = async (base64Audio: string, mimeType: string): Pr
 
     try {
         const response = await ai.models.generateContent({
-            model: 'gemini-3-pro-preview',
+            model: "gemini-3.5-flash",
             contents: { parts: [audioPart, {text: prompt}] },
         });
 
@@ -426,7 +415,7 @@ export const generateParableSegment = async (
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -441,39 +430,6 @@ export const generateParableSegment = async (
     } catch (error) {
         console.error("Error generating parable segment:", error);
         throw new Error("Failed to continue the story. Please try again.");
-    }
-};
-
-export const moderatePrayerWallSubmission = async (text: string): Promise<boolean> => {
-    if (!process.env.API_KEY) {
-        throw new Error("API_KEY environment variable not set.");
-    }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-    const prompt = `
-        You are a content moderator for a Christian spiritual recovery app's anonymous prayer wall.
-        The purpose of the wall is for users to share prayers and notes of gratitude.
-        Analyze the following user submission to determine if it is appropriate.
-        An appropriate submission is one that is positive, hopeful, prayerful, or expresses gratitude. It must not contain negativity, hate speech, violence, profanity, or personal attacks.
-        
-        Submission: "${text}"
-
-        Is this submission appropriate? Respond with only "yes" or "no".
-    `;
-    
-    try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-        });
-        
-        const decision = response.text.trim().toLowerCase();
-        return decision === 'yes';
-
-    } catch (error) {
-        console.error("Error moderating submission:", error);
-        // Fail safely - assume inappropriate if moderation fails
-        return false;
     }
 };
 
@@ -506,7 +462,7 @@ export const generateReflectionSummary = async (theme: WeeklyTheme, responses: P
 
   try {
     const response = await ai.models.generateContent({
-      model: "gemini-2.5-flash",
+      model: "gemini-3.5-flash",
       contents: prompt,
       config: {
         temperature: 0.7,
@@ -519,35 +475,6 @@ export const generateReflectionSummary = async (theme: WeeklyTheme, responses: P
     console.error("Error generating reflection summary:", error);
     throw new Error("Failed to generate a reflection summary. Please try again.");
   }
-};
-
-export const generateDailyAffirmation = async (theme: string): Promise<string> => {
-    if (!process.env.API_KEY) {
-        throw new Error("API_KEY environment variable not set.");
-    }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-    
-    const prompt = `
-        Generate a short, positive, first-person daily affirmation for someone on a Christian spiritual recovery journey.
-        The affirmation should be directly related to the weekly theme of '${theme}'.
-        It needs to be concise, encouraging, and easy to remember (around 10-15 words).
-        Example for theme 'Hope': "Today, I choose to see hope in all circumstances."
-        Respond with only the affirmation text, without any quotation marks or introductory phrases.
-    `;
-
-    try {
-        const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: {
-                temperature: 0.8,
-            },
-        });
-        return response.text.trim();
-    } catch (error) {
-        console.error("Error generating daily affirmation:", error);
-        throw new Error("Failed to generate a daily affirmation.");
-    }
 };
 
 const goalSuggestionsSchema = {
@@ -588,7 +515,7 @@ export const generateGoalSuggestions = async (
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -631,7 +558,7 @@ export const generateMeditationScript = async (theme: WeeklyTheme): Promise<stri
     
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: prompt,
             config: {
                 temperature: 0.7,
@@ -690,7 +617,7 @@ export const analyzeEmotionalArc = async (entries: SavedEntries): Promise<Emotio
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-3-pro-preview",
+            model: "gemini-3.1-pro-preview",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -739,7 +666,7 @@ export const extractMomentsOfGrace = async (entries: SavedEntries): Promise<Mome
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -777,7 +704,7 @@ export const generateSongLyrics = async (songTitle: string, theme: WeeklyTheme):
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: prompt,
             config: {
                 temperature: 0.7,
@@ -797,27 +724,27 @@ export const generatePodcastScript = async (theme: WeeklyTheme): Promise<string>
     const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
     const prompt = `
-        You are an inspirational podcast host. Your style is talkative yet friendly and very encouraging.
-        Create a short podcast script for a person on a Christian spiritual recovery journey.
-        The script should be less than 5 minutes long when spoken at a comfortable pace (around 700-750 words).
-        The episode should be based on the following weekly theme:
+        You are an inspirational podcast host. Your style is warm, welcoming, friendly, and deeply encouraging.
+        Create a concise, highly inspiring podcast reflection for a person on a Christian spiritual recovery journey.
+        The script MUST be short (around 150 to 200 words max, approx 1 to 1.5 minutes of spoken audio) so it is punchy and fits TTS limitations.
+        The reflection should be based on the following weekly theme:
         - Theme: "${theme.theme}"
         - Explanation: "${theme.explanation}"
         - Key Bible Verse: "${theme.bibleVerseText}" (${theme.bibleVerse})
 
-        Structure the podcast with:
-        1. A warm and welcoming introduction.
-        2. A reflection on the weekly theme and how it applies to the challenges and hopes of recovery.
-        3. An exploration of the bible verse, explaining its meaning in a relatable way.
-        4. A concluding thought that leaves the listener feeling hopeful, empowered, and not alone.
+        Structure:
+        1. A brief warm introduction greeting the listener on this week's theme.
+        2. A quick, graceful reflection on this theme in recovery.
+        3. A brief explanation of the Bible verse.
+        4. A reassuring closing reminder that they are loved and not alone.
 
-        The language should be simple, direct, and filled with grace. Speak directly to the listener as 'you'.
-        Return only the script text, without any introductory phrases like "Here is your script:".
+        Speak directly and warmly to the listener as 'you'. Limit to 150-200 words. Do not include sound effect cues or host names.
+        Return only the script text, without any introductory/conversational phrases like "Here is your script:".
     `;
 
     try {
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-3.5-flash",
             contents: prompt,
             config: {
                 temperature: 0.75,
@@ -828,4 +755,65 @@ export const generatePodcastScript = async (theme: WeeklyTheme): Promise<string>
         console.error("Error generating podcast script:", error);
         throw new Error("Failed to generate podcast script. Please try again.");
     }
+};
+
+export const generateRedemptionReport = async (
+  userName: string,
+  entries: SavedEntries,
+  triggers: { intensity: number; trigger: string; copingMechanism?: string; createdAt: string }[],
+  gratitudeCount: number
+): Promise<string> => {
+  if (!process.env.API_KEY) {
+    throw new Error("API_KEY environment variable not set.");
+  }
+  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+  // Compile a small concise log of user journaling
+  const totalEntriesLog = Object.entries(entries)
+    .filter(([_, resp]) => Object.values(resp).some(v => v && v.trim()))
+    .map(([week, resp]) => `Week ${week}: ${Object.values(resp).filter(v => v).join(". ").substring(0, 150)}...`)
+    .slice(-10); // recent 10 journal entries
+
+  // Compile a small concise log of triggers
+  const totalTriggersLog = triggers
+    .slice(0, 10)
+    .map(t => `- Trigger: "${t.trigger}", Intensity: ${t.intensity}/10, Coping: "${t.copingMechanism || 'Not specified'}"`);
+
+  const prompt = `
+    You are a deeply compassionate, supportive, and wise spiritual counselor specializing in faith-based addiction recovery.
+    Please compile a comprehensive "Sacred Steps Redemption Report" for a user named ${userName || 'Pilgrim'}.
+    
+    Here is their current journey status:
+    - Total journaled weeks: ${Object.keys(entries).length}
+    - Total triggers/cravings logged: ${triggers.length}
+    - Total gratitude items written: ${gratitudeCount}
+    
+    Recent Journal Highlights:
+    ${totalEntriesLog.join('\n') || "No journal entries have been completed yet."}
+    
+    Recent Triggers/Craving Logs:
+    ${totalTriggersLog.join('\n') || "No trigger logs recorded yet."}
+    
+    Based on this compiled information, write a beautifully structured, highly encouraging, and deeply reflective Redemption Report.
+    The report should include:
+    1. **JOURNEY PROGRESS ASSESSMENT**: Celebrate their dedication, transparency, progress level, and steps already unlocked or completed.
+    2. **CRAVING PROTECTION OVERVIEW**: Recognize triggers and offer gentle, highly empowering Christian spiritual strategies based on their logged triggers and coping mechanisms.
+    3. **WORDS OF TRUST, HEALING & HOPE**: A personalized, hope-filled note of redemption, reminding them of God's grace and reassuring them they are not alone.
+    
+    Use a warm, comforting, wise, and encouraging Christian tone. Do not use overly complex jargon. Present clear headings.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3.5-flash",
+      contents: prompt,
+      config: {
+        temperature: 0.8,
+      },
+    });
+    return response.text.trim();
+  } catch (error) {
+    console.error("Error generating redemption report:", error);
+    throw new Error("Failed to generate redemption report.");
+  }
 };

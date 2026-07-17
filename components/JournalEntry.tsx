@@ -20,9 +20,6 @@ interface JournalEntryProps {
   imageUrl: string | null;
   onGenerateImage: (week: number, promptText: string) => void;
   isGeneratingImage: boolean;
-  onShare: (content: { text: string; source: string }) => void;
-  affirmation: string | null;
-  isLoadingAffirmation: boolean;
   lyrics: string | null;
   isGeneratingLyrics: boolean;
   onGenerateLyrics: (week: number, theme: WeeklyTheme) => void;
@@ -125,12 +122,6 @@ const PrinterIcon = () => (
     </svg>
 );
 
-const ShareIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12s-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6.002l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.368a3 3 0 105.367 2.684 3 3 0 00-5.367-2.684z" />
-    </svg>
-);
-
 const LoadingSpinnerIcon = () => (
     <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
@@ -194,7 +185,7 @@ const MicrophoneIcon = () => (
 );
 
 
-export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, onResponseChange, onShowToast, isFocusMode, onToggleFocusMode, imageUrl, onGenerateImage, isGeneratingImage, onShare, affirmation, isLoadingAffirmation, podcast, isGeneratingPodcast, onGeneratePodcast, lastChange, onUndo, allThemes, allResponses, allImages }) => {
+export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, onResponseChange, onShowToast, isFocusMode, onToggleFocusMode, imageUrl, onGenerateImage, isGeneratingImage, podcast, isGeneratingPodcast, onGeneratePodcast, lastChange, onUndo, allThemes, allResponses, allImages }) => {
   const [isPrintModalOpen, setPrintModalOpen] = useState(false);
   const [personalizedPrayer, setPersonalizedPrayer] = useState<string | null>(null);
   const [isGeneratingPrayer, setIsGeneratingPrayer] = useState(false);
@@ -399,7 +390,7 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                     <ImageSkeleton />
                 ) : imageUrl ? (
                     <>
-                        <img src={imageUrl} alt={`Reflective art for ${entry.theme}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                        <img src={imageUrl} alt={`Reflective art for ${entry.theme}`} referrerPolicy="no-referrer" className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />
                         <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
                              <button 
                                 onClick={triggerImageGeneration}
@@ -460,49 +451,12 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
         </InfoCard>
 
         <div className="grid md:grid-cols-2 gap-6">
-          <InfoCard
-            title="Your Daily Affirmation"
-            icon={<SparklesIcon />}
-            className="bg-accent-light"
-            action={
-              !isLoadingAffirmation && affirmation && (
-                <div className="flex items-center space-x-1">
-                  <TextToSpeechButton textToSpeak={affirmation} onShowToast={onShowToast} />
-                  <button
-                      onClick={() => onShare({ text: affirmation, source: "Daily Affirmation" })}
-                      className="p-2 text-muted hover:text-primary rounded-full transition-colors hover:bg-card-secondary/50 focus:outline-none focus:ring-2 focus:ring-offset-1 ring-primary"
-                      title="Share this affirmation"
-                      aria-label="Share this affirmation as an image"
-                  >
-                      <ShareIcon />
-                  </button>
-                </div>
-              )
-            }
-          >
-            {isLoadingAffirmation ? (
-              <div className="animate-pulse">
-                <div className="h-5 bg-card-secondary rounded w-3/4"></div>
-              </div>
-            ) : (
-              <p className="font-serif italic text-lg text-accent-dark">"{affirmation}"</p>
-            )}
-          </InfoCard>
-
           <InfoCard 
             title="Bible Verse" 
             icon={<BookOpenIcon />}
             action={
                  <div className="flex items-center space-x-1">
                     <TextToSpeechButton textToSpeak={`Verse from ${entry.bibleVerse}. ${entry.bibleVerseText}`} onShowToast={onShowToast} />
-                    <button
-                        onClick={() => onShare({ text: entry.bibleVerseText, source: entry.bibleVerse })}
-                        className="p-2 text-muted hover:text-primary rounded-full transition-colors hover:bg-card-secondary focus:outline-none focus:ring-2 focus:ring-offset-1 ring-primary"
-                        title="Share this verse"
-                        aria-label="Share this verse as an image"
-                    >
-                        <ShareIcon />
-                    </button>
                 </div>
             }
           >
@@ -692,14 +646,6 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                 action={
                      <div className="flex items-center space-x-1">
                         <TextToSpeechButton textToSpeak={`A quote by ${entry.quote.author}: ${entry.quote.text}`} onShowToast={onShowToast} />
-                         <button
-                            onClick={() => onShare({ text: entry.quote.text, source: `– ${entry.quote.author}` })}
-                            className="p-2 text-muted hover:text-primary rounded-full transition-colors hover:bg-card-secondary focus:outline-none focus:ring-2 focus:ring-offset-1 ring-primary"
-                            title="Share this quote"
-                            aria-label="Share this quote as an image"
-                        >
-                            <ShareIcon />
-                        </button>
                     </div>
                 }
               >
