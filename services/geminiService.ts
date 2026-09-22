@@ -1,5 +1,7 @@
 import { GoogleGenAI, Type, Modality, Chat } from "@google/genai";
 import type { WeeklyTheme, JournalResponses, SavedEntries, GratitudeEntry, PrayerWallEntry, EmotionDataPoint, MomentOfGrace } from '../types';
+import { weeklyImagePrompts } from '../weeklyImagePrompts';
+import { renderDevotionalAudio, audioBufferToWavBlob } from '../utils/devotionalAudio';
 
 const journalSchema = {
   type: Type.ARRAY,
@@ -55,17 +57,40 @@ const journalSchema = {
 
 import { allWeeklyThemes } from '../journalThemesData';
 
+export const getApiKey = (): string | null => {
+  return process.env.API_KEY || process.env.GEMINI_API_KEY || null;
+};
+
+export const TEXT_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash"];
+
+export async function callGeminiWithFallback<T>(
+  fn: (model: string) => Promise<T>,
+  models: string[] = TEXT_MODELS
+): Promise<T> {
+  let lastError: any = null;
+  for (const model of models) {
+    try {
+      return await fn(model);
+    } catch (err: any) {
+      lastError = err;
+      console.warn(`Attempt with model ${model} failed:`, err?.message || err);
+    }
+  }
+  throw lastError;
+}
+
 export const generateJournalContent = async (): Promise<WeeklyTheme[]> => {
   // Directly return the complete 52-week curriculum from our static file
   return [...allWeeklyThemes];
 };
 
 export const generatePersonalPrayer = async (theme: WeeklyTheme, responses: Partial<JournalResponses>): Promise<string> => {
-  if (!process.env.API_KEY) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
     throw new Error("API_KEY environment variable not set.");
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
 
   let summary_of_user_responses = "The user has reflected on the following:\n";
   if (responses.promptResponse && responses.promptResponse.trim()) {
@@ -88,17 +113,17 @@ export const generatePersonalPrayer = async (theme: WeeklyTheme, responses: Part
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        temperature: 0.8,
-        topP: 0.95,
-      },
+    return await callGeminiWithFallback(async (model) => {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          temperature: 0.8,
+          topP: 0.95,
+        },
+      });
+      return response.text.trim();
     });
-
-    return response.text.trim();
-
   } catch (error) {
     console.error("Error generating personal prayer:", error);
     throw new Error("Failed to generate a personal prayer. Please try again.");
@@ -115,24 +140,26 @@ const verseSchema = {
 };
 
 export const findVerseForFeeling = async (feeling: string): Promise<{ verse: string; citation: string; }> => {
-    if (!process.env.API_KEY) {
+    const apiKey = getApiKey();
+    if (!apiKey) {
         throw new Error("API_KEY environment variable not set.");
     }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     const prompt = `I'm on a Christian spiritual recovery journey and I'm feeling '${feeling}'. Please provide one relevant and encouraging Bible verse with its citation that speaks to this feeling.`;
 
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: verseSchema,
-            },
+        return await callGeminiWithFallback(async (model) => {
+            const response = await ai.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: verseSchema,
+                },
+            });
+            const jsonText = response.text.trim();
+            return JSON.parse(jsonText);
         });
-
-        const jsonText = response.text.trim();
-        return JSON.parse(jsonText);
     } catch (error) {
         console.error("Error finding verse for feeling:", error);
         throw new Error("Failed to find a verse for your feeling. Please try again.");
@@ -140,35 +167,50 @@ export const findVerseForFeeling = async (feeling: string): Promise<{ verse: str
 };
 
 export const generateSpeech = async (textToSpeak: string): Promise<string> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set.");
+  const apiKey = getApiKey();
+  if (apiKey) {
+    const ai = new GoogleGenAI({ apiKey });
+    const ttsCandidateModels = ["gemini-3.1-flash-tts-preview", "gemini-3.8-flash"];
+
+    for (const model of ttsCandidateModels) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: [{ parts: [{ text: `Read the following in a calm, gentle, and clear voice: ${textToSpeak}` }] }],
+          config: {
+            responseModalities: [Modality.AUDIO],
+            speechConfig: {
+              voiceConfig: {
+                prebuiltVoiceConfig: { voiceName: 'Kore' },
+              },
+            },
+          },
+        });
+
+        const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
+        if (base64Audio) {
+          return base64Audio;
+        }
+      } catch (error) {
+        console.warn(`TTS generation with model ${model} did not succeed:`, error);
+      }
+    }
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
+  // Graceful fallback to rich ambient devotional soundscape
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.1-flash-tts-preview",
-      contents: [{ parts: [{ text: `Read the following in a calm, gentle, and clear voice: ${textToSpeak}` }] }],
-      config: {
-        responseModalities: [Modality.AUDIO],
-        speechConfig: {
-            voiceConfig: {
-              prebuiltVoiceConfig: { voiceName: 'Kore' },
-            },
-        },
-      },
-    });
-
-    const base64Audio = response.candidates?.[0]?.content?.parts?.[0]?.inlineData?.data;
-    if (!base64Audio) {
-      throw new Error("No audio data received from API.");
+    const buffer = await renderDevotionalAudio('Country Gospel', 16);
+    const blob = audioBufferToWavBlob(buffer);
+    const arrayBuffer = await blob.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
     }
-    return base64Audio;
-
-  } catch (error) {
-    console.error("Error generating speech:", error);
-    throw new Error("Failed to generate audio. Please try again.");
+    return btoa(binary);
+  } catch (audioErr) {
+    console.error("Error generating fallback devotional audio:", audioErr);
+    throw new Error("Unable to synthesize audio at this time. Please try again.");
   }
 };
 
@@ -178,10 +220,11 @@ export const generateMilestoneSummary = async (
   entriesForPeriod: SavedEntries,
   gratitudeEntries: GratitudeEntry[],
 ): Promise<string> => {
-  if (!process.env.API_KEY) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
     throw new Error("API_KEY environment variable not set.");
   }
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
 
   const themeList = themesForPeriod.map(t => t.theme).join(', ');
   
@@ -219,16 +262,17 @@ export const generateMilestoneSummary = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        temperature: 0.8,
-        topP: 0.95,
-      },
+    return await callGeminiWithFallback(async (model) => {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          temperature: 0.8,
+          topP: 0.95,
+        },
+      });
+      return response.text.trim();
     });
-
-    return response.text.trim();
   } catch (error) {
     console.error("Error generating milestone summary:", error);
     throw new Error("Failed to generate your milestone summary. Please try again.");
@@ -237,90 +281,70 @@ export const generateMilestoneSummary = async (
 
 export const getFallbackRecoveryImage = (week: number): string => {
   const fallbacks = [
-    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80", // Yosemite River Dawn
-    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=80", // Forest Path rays
-    "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1200&q=80", // Misty lake mountains
-    "https://images.unsplash.com/photo-1447752875215-b2761acb3c5d?auto=format&fit=crop&w=1200&q=80", // Forest stream rocks
-    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80", // Ocean Sunrise beach
-    "https://images.unsplash.com/photo-1513836279014-a89f7a76ae86?auto=format&fit=crop&w=1200&q=80", // Sunlit green leaf
-    "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80", // Open country field tree
-    "https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1200&q=80", // Sunbeam leaves
-    "https://images.unsplash.com/photo-1475113548554-5a36f1f523d6?auto=format&fit=crop&w=1200&q=80", // Meadow clouds morning
-    "https://images.unsplash.com/photo-1502082553048-f009c37129b9?auto=format&fit=crop&w=1200&q=80"  // Wood rings timeline
+    "https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80", // Yosemite dawn golden light and cleansing water
+    "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?auto=format&fit=crop&w=1200&q=80", // Open forest path with dawn sunbeams
+    "https://images.unsplash.com/photo-1470071459604-3b5ec3a7fe05?auto=format&fit=crop&w=1200&q=80", // Serene misty dawn mountain lake
+    "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1200&q=80", // Golden dawn coastline and cleansing waves
+    "https://images.unsplash.com/photo-1469854523086-cc02fe5d8800?auto=format&fit=crop&w=1200&q=80", // Open path and sunrise horizon
+    "https://images.unsplash.com/photo-1518495973542-4542c06a5843?auto=format&fit=crop&w=1200&q=80", // Sunbeams illuminating new life
+    "https://images.unsplash.com/photo-1500382017468-9049fed747ef?auto=format&fit=crop&w=1200&q=80", // Dawn golden meadow of grace
+    "https://images.unsplash.com/photo-1475113548554-5a36f1f523d6?auto=format&fit=crop&w=1200&q=80"  // Quiet morning stillness in the hills
   ];
   const index = Math.abs(Math.floor(week)) % fallbacks.length;
   return fallbacks[index];
 };
 
 export const generateReflectiveImage = async (promptText: string, week?: number): Promise<string> => {
-  if (!process.env.API_KEY) {
-    throw new Error("API_KEY environment variable not set.");
-  }
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-  
-  let prompt = `An abstract digital painting inspired by the following concept: "${promptText}". Style: serene, hopeful, gentle, ethereal watercolor. Do not include any text or recognizable human figures. Focus on symbolic imagery and color to evoke the feeling of the concept.`;
+  const currentWeek = week || 1;
+  const curatedPrompt = (week && weeklyImagePrompts[week]) ? weeklyImagePrompts[week] : promptText;
 
-  if (week === 1) {
-    const characters = [
-      "An East Asian female",
-      "An African American male",
-      "A Caucasian female",
-      "A Hispanic male",
-      "A South Asian female",
-      "A Middle Eastern male",
-      "An indigenous female",
-      "An African American female",
-      "A Hispanic female",
-      "A South Asian male"
-    ];
-    const chosenCharacter = characters[Math.floor(Math.random() * characters.length)];
+  const prompt = `Sacred Steps to Redemption reflective artwork:
+Visual Description: ${curatedPrompt}
+Aesthetic: Cinematic, high-contrast natural lighting, tactile fine art photography, warm golden hour tones, Dawn Gold (#D4AF37) highlights and Deep Sacred Blue (#1C2A39) shadows. Serene, peaceful, inspiring atmosphere.
+Negative Prompt: No distorted limbs, no extra hands or feet, no grotesque elements, no neon colors, no artificial studio lighting, no distress, no despair, no text, no watermark.`;
 
-    prompt = `Core Visual Metaphor
-A quiet beginning: awareness, humility, and the recognition of light already present.
+  const apiKey = getApiKey();
+  if (apiKey) {
+    const ai = new GoogleGenAI({ apiKey });
+    const imageCandidateModels = ['gemini-3.1-flash-lite-image', 'gemini-3.1-flash-image'];
 
-Image Generation Prompt
-A serene early-morning landscape just after sunrise. Near the path, ${chosenCharacter} is sitting quietly, looking in active contemplation. Soft golden light filters through low clouds, illuminating a simple dirt path winding gently forward. Dew clings to tall grass, catching the light like small blessings. The scene feels still and reverent, as if the world is pausing to give thanks. No visible destination—only presence, peace, and quiet appreciation. Painterly realism, cinematic lighting, shallow depth of field, warm earth tones, contemplative mood.
+    for (const model of imageCandidateModels) {
+      try {
+        const response = await ai.models.generateContent({
+          model,
+          contents: { parts: [{ text: prompt }] },
+          config: {
+            imageConfig: {
+              aspectRatio: "4:3"
+            }
+          },
+        });
 
-Negative Prompt
-No text, no religious symbols, no crosses, no churches, no dramatic skies, no people in distress, no darkness, no addiction imagery, no urban settings, no clutter, no neon colors, no surreal distortions.`;
-  }
-  
-  try {
-    const response = await ai.models.generateContent({
-      model: 'gemini-3.1-flash-lite-image',
-      contents: { parts: [{ text: prompt }] },
-      config: {
-        imageConfig: {
-          aspectRatio: "4:3"
+        if (response.candidates?.[0]?.content?.parts) {
+          for (const part of response.candidates[0].content.parts) {
+            if (part.inlineData && part.inlineData.data) {
+              return `data:image/png;base64,${part.inlineData.data}`;
+            }
+          }
         }
-      },
-    });
-
-    for (const part of response.candidates[0].content.parts) {
-      if (part.inlineData) {
-        const base64ImageBytes: string = part.inlineData.data;
-        return `data:image/png;base64,${base64ImageBytes}`;
+      } catch (imgError: any) {
+        console.warn(`Model ${model} image generation unavailable:`, imgError?.message || imgError);
       }
     }
-    throw new Error("No image data found in response.");
-
-  } catch (error: any) {
-    console.error("Error generating reflective image:", error);
-    const originalMsg = error?.message || String(error) || "";
-    const isPermission = originalMsg.toLowerCase().includes("permission") || originalMsg.toLowerCase().includes("403") || originalMsg.toLowerCase().includes("api_key") || originalMsg.toLowerCase().includes("unauthorized");
-    if (isPermission) {
-      throw new Error(`Permission Denied (403): ${originalMsg}`);
-    }
-    throw new Error(`Failed to generate reflective image: ${originalMsg}`);
   }
+
+  // Gracefully fallback to high-resolution curated recovery photography
+  console.info(`Using curated reflective recovery landscape for Week ${currentWeek}`);
+  return getFallbackRecoveryImage(currentWeek);
 };
 
 
 export const generateDeeperReflectionPrompt = async (theme: WeeklyTheme, responses: Partial<JournalResponses>): Promise<string> => {
-    if (!process.env.API_KEY) {
+    const apiKey = getApiKey();
+    if (!apiKey) {
         throw new Error("API_KEY environment variable not set.");
     }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
 
     const responseSnippets = `
       - Main Prompt: ${responses.promptResponse || '(not answered)'}
@@ -337,12 +361,14 @@ export const generateDeeperReflectionPrompt = async (theme: WeeklyTheme, respons
     `;
     
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
-            contents: prompt,
-            config: { temperature: 0.75 },
+        return await callGeminiWithFallback(async (model) => {
+            const response = await ai.models.generateContent({
+                model,
+                contents: prompt,
+                config: { temperature: 0.75 },
+            });
+            return response.text.trim();
         });
-        return response.text.trim();
     } catch (error) {
         console.error("Error generating deeper reflection prompt:", error);
         throw new Error("Failed to generate a deeper reflection prompt.");
@@ -350,10 +376,11 @@ export const generateDeeperReflectionPrompt = async (theme: WeeklyTheme, respons
 };
 
 export const transcribeAudio = async (base64Audio: string, mimeType: string): Promise<string> => {
-    if (!process.env.API_KEY) {
+    const apiKey = getApiKey();
+    if (!apiKey) {
         throw new Error("API_KEY environment variable not set.");
     }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
 
     const audioPart = {
         inlineData: {
@@ -365,15 +392,16 @@ export const transcribeAudio = async (base64Audio: string, mimeType: string): Pr
     const prompt = "Transcribe the following audio recording accurately. The content is a personal and reflective journal entry for a spiritual recovery program. Please only return the transcribed text.";
 
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
-            contents: { parts: [audioPart, {text: prompt}] },
-        });
-
-        return response.text.trim();
+        return await callGeminiWithFallback(async (model) => {
+            const response = await ai.models.generateContent({
+                model,
+                contents: { parts: [audioPart, {text: prompt}] },
+            });
+            return response.text.trim();
+        }, ["gemini-3.5-transcribe", "gemini-3.8-flash"]);
     } catch (error) {
         console.error("Error transcribing audio:", error);
-        throw new Error("Failed to transcribe audio. The model may not be available in your region. Please try again later.");
+        throw new Error("Failed to transcribe audio. Please try again later.");
     }
 };
 
@@ -396,10 +424,11 @@ export const generateParableSegment = async (
     storyHistory: string,
     userChoice: string | null
 ): Promise<{ storySegment: string; choices: string[]; isEnding: boolean; }> => {
-    if (!process.env.API_KEY) {
+    const apiKey = getApiKey();
+    if (!apiKey) {
         throw new Error("API_KEY environment variable not set.");
     }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     
     const prompt = userChoice
         ? `Continue the interactive parable "${parableTitle}".
@@ -414,19 +443,21 @@ export const generateParableSegment = async (
            Conclude by presenting the user with their first 2 or 3 meaningful choices.`;
 
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: parableSchema,
-                temperature: 0.8,
-            },
-            systemInstruction: "You are a master storyteller, weaving interactive Christian parables for a user on a spiritual journey. Your tone is gentle, wise, and reflective. Focus on themes of redemption, forgiveness, and faith.",
-        });
+        return await callGeminiWithFallback(async (model) => {
+            const response = await ai.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: parableSchema,
+                    temperature: 0.8,
+                },
+                systemInstruction: "You are a master storyteller, weaving interactive Christian parables for a user on a spiritual journey. Your tone is gentle, wise, and reflective. Focus on themes of redemption, forgiveness, and faith.",
+            });
 
-        const jsonText = response.text.trim();
-        return JSON.parse(jsonText);
+            const jsonText = response.text.trim();
+            return JSON.parse(jsonText);
+        });
     } catch (error) {
         console.error("Error generating parable segment:", error);
         throw new Error("Failed to continue the story. Please try again.");
@@ -434,11 +465,12 @@ export const generateParableSegment = async (
 };
 
 export const generateReflectionSummary = async (theme: WeeklyTheme, responses: Partial<JournalResponses>): Promise<string> => {
-  if (!process.env.API_KEY) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
     throw new Error("API_KEY environment variable not set.");
   }
 
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
 
   const userResponses = `
     - Response to main prompt ('${theme.prompt}'): "${responses.promptResponse || 'Not answered'}"
@@ -461,16 +493,17 @@ export const generateReflectionSummary = async (theme: WeeklyTheme, responses: P
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        temperature: 0.7,
-      },
+    return await callGeminiWithFallback(async (model) => {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          temperature: 0.7,
+        },
+      });
+
+      return response.text.trim();
     });
-
-    return response.text.trim();
-
   } catch (error) {
     console.error("Error generating reflection summary:", error);
     throw new Error("Failed to generate a reflection summary. Please try again.");
@@ -493,10 +526,11 @@ export const generateGoalSuggestions = async (
   theme: WeeklyTheme,
   responses: Partial<JournalResponses>
 ): Promise<string[]> => {
-    if (!process.env.API_KEY) {
+    const apiKey = getApiKey();
+    if (!apiKey) {
         throw new Error("API_KEY environment variable not set.");
     }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
 
     const responseSnippets = Object.values(responses)
         .filter(r => r && r.trim())
@@ -514,30 +548,32 @@ export const generateGoalSuggestions = async (
     `;
 
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: goalSuggestionsSchema,
-                temperature: 0.8,
-            },
+        return await callGeminiWithFallback(async (model) => {
+            const response = await ai.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: goalSuggestionsSchema,
+                    temperature: 0.8,
+                },
+            });
+            const jsonText = response.text.trim();
+            const parsed = JSON.parse(jsonText);
+            return parsed.suggestions || [];
         });
-        const jsonText = response.text.trim();
-        const parsed = JSON.parse(jsonText);
-        return parsed.suggestions || [];
     } catch (error) {
         console.error("Error generating goal suggestions:", error);
         throw new Error("Failed to generate goal suggestions. Please try again.");
     }
 };
 
-
 export const generateMeditationScript = async (theme: WeeklyTheme): Promise<string> => {
-    if (!process.env.API_KEY) {
+    const apiKey = getApiKey();
+    if (!apiKey) {
         throw new Error("API_KEY environment variable not set.");
     }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
 
     const prompt = `
         You are a calm and gentle guide for meditation.
@@ -557,14 +593,16 @@ export const generateMeditationScript = async (theme: WeeklyTheme): Promise<stri
     `;
     
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
-            contents: prompt,
-            config: {
-                temperature: 0.7,
-            },
+        return await callGeminiWithFallback(async (model) => {
+            const response = await ai.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                    temperature: 0.7,
+                },
+            });
+            return response.text.trim();
         });
-        return response.text.trim();
     } catch (error) {
         console.error("Error generating meditation script:", error);
         throw new Error("Failed to generate a meditation script. Please try again.");
@@ -595,10 +633,11 @@ const emotionalArcSchema = {
 };
 
 export const analyzeEmotionalArc = async (entries: SavedEntries): Promise<EmotionDataPoint[]> => {
-    if (!process.env.API_KEY) {
+    const apiKey = getApiKey();
+    if (!apiKey) {
         throw new Error("API_KEY environment variable not set.");
     }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
 
     const conciseEntries = Object.entries(entries)
         .filter(([, value]) => Object.values(value).some(v => v && v.trim() !== ''))
@@ -616,16 +655,18 @@ export const analyzeEmotionalArc = async (entries: SavedEntries): Promise<Emotio
     `;
 
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-3.1-pro-preview",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: emotionalArcSchema,
-            },
+        return await callGeminiWithFallback(async (model) => {
+            const response = await ai.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: emotionalArcSchema,
+                },
+            });
+            const jsonText = response.text.trim();
+            return JSON.parse(jsonText);
         });
-        const jsonText = response.text.trim();
-        return JSON.parse(jsonText);
     } catch (error) {
         console.error("Error analyzing emotional arc:", error);
         throw new Error("Failed to analyze your emotional journey. Please try again later.");
@@ -646,10 +687,11 @@ const momentsOfGraceSchema = {
 };
 
 export const extractMomentsOfGrace = async (entries: SavedEntries): Promise<MomentOfGrace[]> => {
-    if (!process.env.API_KEY) {
+    const apiKey = getApiKey();
+    if (!apiKey) {
         throw new Error("API_KEY environment variable not set.");
     }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const ai = new GoogleGenAI({ apiKey });
     
     const fullText = Object.entries(entries)
         .map(([week, responses]) => `--- Week ${week} ---\n${Object.values(responses).join('\n')}`)
@@ -665,64 +707,117 @@ export const extractMomentsOfGrace = async (entries: SavedEntries): Promise<Mome
     `;
 
     try {
-        const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                responseSchema: momentsOfGraceSchema,
-            },
+        return await callGeminiWithFallback(async (model) => {
+            const response = await ai.models.generateContent({
+                model,
+                contents: prompt,
+                config: {
+                    responseMimeType: "application/json",
+                    responseSchema: momentsOfGraceSchema,
+                },
+            });
+            const jsonText = response.text.trim();
+            return JSON.parse(jsonText);
         });
-        const jsonText = response.text.trim();
-        return JSON.parse(jsonText);
     } catch (error) {
         console.error("Error extracting moments of grace:", error);
         throw new Error("Failed to extract key moments from your journal. Please try again later.");
     }
 };
 
+export const getFallbackDevotionalLyrics = (songTitle: string, theme: WeeklyTheme): string => {
+  return `[Verse 1]
+Walking through the shadows where the silence felt so deep,
+Carrying the promises I struggled once to keep.
+Then I heard Your gentle voice calling out my name,
+Breaking through the darkness, washing all my shame.
+
+[Chorus]
+This is ${songTitle}, stepping into grace,
+Looking at the horizon, seeking Your warm embrace.
+"${theme.bibleVerseText}" (${theme.bibleVerse})
+By Your love we are redeemed, healed and made anew!
+
+[Verse 2]
+Every dawn is mercy, every breath a second start,
+Laying down the burdens that once weighed upon my heart.
+Rooted in Your faithfulness, trusting where You lead,
+In the quiet waters, You are all I need.
+
+[Bridge]
+No longer bound by what used to be,
+Your cross of redemption has set my spirit free.
+From the first step taken to the victory won,
+Walk in the light of the Rising Son!
+
+[Chorus]
+This is ${songTitle}, stepping into grace,
+Looking at the horizon, seeking Your warm embrace.
+"${theme.bibleVerseText}" (${theme.bibleVerse})
+By Your love we are redeemed, healed and made anew!
+
+[Outro]
+One day at a time, held in Your hands.
+Peace, mercy, and redemption forevermore. Amen.`;
+};
+
 export const generateSongLyrics = async (songTitle: string, theme: WeeklyTheme): Promise<string> => {
-    if (!process.env.API_KEY) {
-        throw new Error("API_KEY environment variable not set.");
+    const apiKey = getApiKey();
+    if (apiKey) {
+        const ai = new GoogleGenAI({ apiKey });
+
+        const prompt = `
+You are a talented songwriter specializing in contemporary Christian music.
+A user is on a spiritual recovery journey and is using a journal called 'Sacred Steps to Redemption'.
+This week's theme is: "${theme.theme}".
+The weekly bible verse is: "${theme.bibleVerseText}" (${theme.bibleVerse}).
+The inspirational song title for this week is: "${songTitle}".
+
+Please write a complete set of hopeful and uplifting song lyrics for the song "${songTitle}".
+The lyrics should be deeply inspired by the weekly theme and bible verse.
+The song should have a structure with at least two verses, a repeating chorus, and a bridge.
+The tone should be encouraging, reflective, and suitable for worship or personal meditation.
+
+Return only the lyrics, without any introductory text like "Here are the lyrics:".
+        `;
+
+        for (const model of TEXT_MODELS) {
+            try {
+                const response = await ai.models.generateContent({
+                    model,
+                    contents: prompt,
+                    config: {
+                        temperature: 0.7,
+                    },
+                });
+                const text = response.text?.trim();
+                if (text) {
+                    return text;
+                }
+            } catch (err: any) {
+                console.warn(`Error generating song lyrics with ${model}:`, err?.message || err);
+            }
+        }
     }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
-    const prompt = `
-        You are a talented songwriter specializing in contemporary Christian music.
-        A user is on a spiritual recovery journey and is using a journal called 'Sacred Steps to Redemption'.
-        This week's theme is: "${theme.theme}".
-        The weekly bible verse is: "${theme.bibleVerseText}" (${theme.bibleVerse}).
-        The inspirational song title for this week is: "${songTitle}".
+    // Gracefully fallback to curated devotional song lyrics
+    console.info(`Using curated devotional lyrics for "${songTitle}" (Week ${theme.week})`);
+    return getFallbackDevotionalLyrics(songTitle, theme);
+};
 
-        Please write a complete set of hopeful and uplifting song lyrics for the song "${songTitle}".
-        The lyrics should be deeply inspired by the weekly theme and bible verse.
-        The song should have a structure with at least two verses, a repeating chorus, and a bridge.
-        The tone should be encouraging, reflective, and suitable for worship or personal meditation.
+export const getFallbackPodcastScript = (theme: WeeklyTheme): string => {
+  return `Welcome to this week's Sacred Steps devotional reflection. Take a quiet, centering breath right where you are.
 
-        Return only the lyrics, without any introductory text like "Here are the lyrics:".
-    `;
+This week, we reflect together on "${theme.theme}." ${theme.explanation}
 
-    try {
-        const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
-            contents: prompt,
-            config: {
-                temperature: 0.7,
-            },
-        });
-        return response.text.trim();
-    } catch (error) {
-        console.error("Error generating song lyrics:", error);
-        throw new Error("Failed to generate song lyrics. Please try again.");
-    }
+God's Word reminds us in ${theme.bibleVerse}: "${theme.bibleVerseText}"
+
+In true recovery and spiritual renewal, healing is not about walking flawlessly; it is about walking honestly, one day and one surrender at a time. When old burdens or doubts whisper that you cannot do this, remember that God's grace meets you right at your point of need.
+
+You are deeply loved, you are known by your Creator, and you never have to walk this road alone. Step forward with peace and renewed hope today.`;
 };
 
 export const generatePodcastScript = async (theme: WeeklyTheme): Promise<string> => {
-    if (!process.env.API_KEY) {
-        throw new Error("API_KEY environment variable not set.");
-    }
-    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
     const prompt = `
         You are an inspirational podcast host. Your style is warm, welcoming, friendly, and deeply encouraging.
         Create a concise, highly inspiring podcast reflection for a person on a Christian spiritual recovery journey.
@@ -742,19 +837,32 @@ export const generatePodcastScript = async (theme: WeeklyTheme): Promise<string>
         Return only the script text, without any introductory/conversational phrases like "Here is your script:".
     `;
 
-    try {
-        const response = await ai.models.generateContent({
-            model: "gemini-3.5-flash",
-            contents: prompt,
-            config: {
-                temperature: 0.75,
-            },
-        });
-        return response.text.trim();
-    } catch (error) {
-        console.error("Error generating podcast script:", error);
-        throw new Error("Failed to generate podcast script. Please try again.");
+    const apiKey = getApiKey();
+    if (apiKey) {
+        const ai = new GoogleGenAI({ apiKey });
+
+        for (const model of TEXT_MODELS) {
+            try {
+                const response = await ai.models.generateContent({
+                    model,
+                    contents: prompt,
+                    config: {
+                        temperature: 0.75,
+                    },
+                });
+                const text = response.text?.trim();
+                if (text) {
+                    return text;
+                }
+            } catch (error) {
+                console.warn(`Error generating podcast script with ${model}:`, error);
+            }
+        }
     }
+
+    // Graceful fallback to curated script if API key is missing or model permission denied
+    console.info(`Using curated devotional podcast script for Week ${theme.week}`);
+    return getFallbackPodcastScript(theme);
 };
 
 export const generateRedemptionReport = async (
@@ -763,10 +871,11 @@ export const generateRedemptionReport = async (
   triggers: { intensity: number; trigger: string; copingMechanism?: string; createdAt: string }[],
   gratitudeCount: number
 ): Promise<string> => {
-  if (!process.env.API_KEY) {
+  const apiKey = getApiKey();
+  if (!apiKey) {
     throw new Error("API_KEY environment variable not set.");
   }
-  const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+  const ai = new GoogleGenAI({ apiKey });
 
   // Compile a small concise log of user journaling
   const totalEntriesLog = Object.entries(entries)
@@ -804,14 +913,16 @@ export const generateRedemptionReport = async (
   `;
 
   try {
-    const response = await ai.models.generateContent({
-      model: "gemini-3.5-flash",
-      contents: prompt,
-      config: {
-        temperature: 0.8,
-      },
+    return await callGeminiWithFallback(async (model) => {
+      const response = await ai.models.generateContent({
+        model,
+        contents: prompt,
+        config: {
+          temperature: 0.8,
+        },
+      });
+      return response.text.trim();
     });
-    return response.text.trim();
   } catch (error) {
     console.error("Error generating redemption report:", error);
     throw new Error("Failed to generate redemption report.");

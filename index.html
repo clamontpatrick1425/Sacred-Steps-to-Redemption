@@ -20,25 +20,62 @@
         } catch (e) {
           console.error("Failed to shim window.fetch getter to prevent crashes:", e);
         }
+
+        // Safe JSON.stringify wrapper to prevent "TypeError: Converting circular structure to JSON" on DOM/Fiber elements
+        try {
+          var originalStringify = JSON.stringify;
+          JSON.stringify = function(value, replacer, space) {
+            try {
+              return originalStringify.call(this, value, replacer, space);
+            } catch (err) {
+              if (err instanceof TypeError && /circular|cyclic/i.test(err.message)) {
+                var seen = new WeakSet();
+                var safeReplacer = function(key, val) {
+                  if (typeof val === 'object' && val !== null) {
+                    if (val instanceof Node || (typeof Element !== 'undefined' && val instanceof Element)) {
+                      return '[DOMElement ' + (val.nodeName || '') + ']';
+                    }
+                    if (seen.has(val)) {
+                      return '[Circular]';
+                    }
+                    seen.add(val);
+                  }
+                  if (typeof replacer === 'function') {
+                    return replacer.call(this, key, val);
+                  }
+                  return val;
+                };
+                try {
+                  return originalStringify.call(this, value, safeReplacer, space);
+                } catch (e2) {
+                  return '"[Circular Structure Handled]"';
+                }
+              }
+              throw err;
+            }
+          };
+        } catch (errShim) {
+          // ignore shim initialization errors
+        }
       })();
     </script>
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="Sacred Steps to Redemption is a 52-week interactive recovery journal program designed to support addiction recovery, sobriety, and spiritual rehabilitation. Features biblical reflections, daily gratitude, and AI-enabled podcasts." />
-    <meta name="keywords" content="recovery journal, addiction recovery, sobriety tracker, 52 week recovery program, spiritual recovery, Christian recovery, therapeutic journaling, mental health, AI podcast recovery helper" />
-    <meta name="author" content="Sacred Steps to Redemption Team" />
+    <meta name="description" content="Sacred Steps to Redemption: The Year of Grace - A 52-Week Recovery Journal of Reflection, Gratitude &amp; Prayer by C. Lamont Patrick, published by Kya Daisy Publishing. A Christ-centered 12-Step framework, mindfulness reflections, and sacred audio." />
+    <meta name="keywords" content="Sacred Steps to Redemption, The Year of Grace, C. Lamont Patrick, Kya Daisy Publishing, addiction recovery, recovery journal, prayerful path, 12-step framework, Christ-centered recovery, sobriety tracker, spiritual freedom, sacred audio" />
+    <meta name="author" content="C. Lamont Patrick • Kya Daisy Publishing" />
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Sacred Steps to Redemption - 52-Week Recovery Journal" />
-    <meta property="og:description" content="Discover a biblically-grounded, therapeutic addiction recovery journal. Monitor your sobriety, explore 52 curated themes, track gratitude, and listen to customized guidance podcasts designed for deep rehabilitation." />
+    <meta property="og:title" content="Sacred Steps to Redemption: The Year of Grace" />
+    <meta property="og:description" content="A 52-Week Recovery Journal of Reflection, Gratitude &amp; Prayer by C. Lamont Patrick (Kya Daisy Publishing). Sustained Walking, Daily Freedom through a Christ-centered 12-Step framework." />
     <meta property="og:url" content="https://your-canonical-url.com" />
     <meta property="og:image" content="https://your-canonical-url.com/og-cover-recovery.png" />
     
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
-    <meta property="twitter:title" content="Sacred Steps to Redemption - 52-Week Recovery Journal" />
-    <meta property="twitter:description" content="A structural 52-week path to addiction rehabilitation. Real-time logging, daily sobriety trackers, and customized AI meditation aids." />
+    <meta property="twitter:title" content="Sacred Steps to Redemption: The Year of Grace" />
+    <meta property="twitter:description" content="A 52-Week Recovery Journal of Reflection, Gratitude &amp; Prayer by C. Lamont Patrick, Kya Daisy Publishing." />
     <meta property="twitter:image" content="https://your-canonical-url.com/og-cover-recovery.png" />
 
     <!-- Highly Optimized JSON-LD Structured Data Schema Markup (ASEO/GEO/AEO) -->
@@ -47,9 +84,26 @@
       "@context": "https://schema.org",
       "@graph": [
         {
+          "@type": "Book",
+          "@id": "https://your-canonical-url.com/#book",
+          "name": "Sacred Steps to Redemption: The Year of Grace",
+          "alternateName": "A 52-Week Recovery Journal of Reflection, Gratitude & Prayer",
+          "author": {
+            "@type": "Person",
+            "name": "C. Lamont Patrick"
+          },
+          "publisher": {
+            "@type": "Organization",
+            "name": "Kya Daisy Publishing"
+          },
+          "copyrightYear": 2025,
+          "bookEdition": "Version 1.0 • 2026 Edition",
+          "description": "A 52-Week Recovery Journal of Reflection, Gratitude & Prayer to guide individuals out of addiction, trauma, and emotional bondage into sustained freedom through a Christ-centered 12-Step framework, mindfulness reflections, and sacred audio."
+        },
+        {
           "@type": "SoftwareApplication",
           "@id": "https://your-canonical-url.com/#app",
-          "name": "Sacred Steps to Redemption",
+          "name": "Sacred Steps to Redemption: The Year of Grace",
           "applicationCategory": "HealthApplication",
           "operatingSystem": "All",
           "browserRequirements": "Requires HTML5 compatible browser",
@@ -58,151 +112,126 @@
             "price": "0.00",
             "priceCurrency": "USD"
           },
-          "description": "An interactive digital 52-week recovery journal crafted for individuals in addiction recovery and spiritual rehabilitation. Integrates Christian principles with mental health methodologies, custom visual meditation, daily gratitude logging, and AI voice podcast features.",
+          "description": "An interactive digital companion to Sacred Steps to Redemption: The Year of Grace - A 52-Week Recovery Journal of Reflection, Gratitude & Prayer by C. Lamont Patrick. Features the 10-Chapter & 12-Step Framework, biblical anchors, daily goals, and sacred audio soundscapes.",
           "featureList": [
-            "Structured 52-Week Spiritual &amp; Psychological Timeline",
-            "Biometric and Mood Triggers Tracking",
-            "Instant AI-Generated Reflective Imagery &amp; Scriptured Lyrics",
-            "On-Demand Weekly Synthetic Recovery Podcasts &amp; Speeches",
-            "Interactive SOS Emergency Intervention Board",
-            "Privacy PIN Protection &amp; Client-Side Offline Database Storage",
-            "Exportable Journal Logs &amp; Beautiful PDF Printouts"
+            "Christ-Centered 12-Step Framework across 10 Structured Chapters",
+            "Daily Check-in & Emotional Trigger Tracker",
+            "Sacred Audio & Reflection Soundscapes",
+            "52-Week Worship Series Anthems & Audio Stream",
+            "Biblical Aspirations & Scripture Anchors (NIV)",
+            "SOS Emergency Intervention Suite",
+            "Privacy PIN Protection & Offline Journal Storage"
           ]
+        },
+        {
+          "@type": "MusicPlaylist",
+          "@id": "https://your-canonical-url.com/#playlist",
+          "name": "Sacred Steps to Redemption: 52-Week Recovery Blueprint Worship Series",
+          "numTracks": 52,
+          "description": "Original 52-week AI worship anthems composed across Country Gospel, Gospel Rap, Gospel Soul, Afroswing-Gospel, and Amapiano-Gospel to companion each recovery week.",
+          "genre": ["Country Gospel", "Gospel Rap", "Gospel Soul", "Afroswing-Gospel", "Amapiano-Gospel", "Gospel House", "Gospel Blues"]
         },
         {
           "@type": "WebSite",
           "@id": "https://your-canonical-url.com/#website",
           "url": "https://your-canonical-url.com",
-          "name": "Sacred Steps to Redemption",
-          "description": "Interactive recovery counseling and daily tracking."
-        },
-        {
-          "@type": "FAQPage",
-          "@id": "https://your-canonical-url.com/#faq",
-          "mainEntity": [
-            {
-              "@type": "Question",
-              "name": "What is Sacred Steps to Redemption?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Sacred Steps to Redemption is a comprehensive, biblically-guided, and AI-enabled 52-week mental wellness and addiction recovery journal. It provides weekly thematic structures (such as 'Self-Assessment', 'Atonement', and 'Mercy'), prayer indicators, and clinical-spiritual worksheets to help individuals foster daily thankfulness, assess relapse triggers, and remain steadfast in sobriety."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "Is my personal recovery and journaling information private?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "Yes, user privacy is paramount. Sacred Steps to Redemption leverages browser-level encrypted local storage or IndexedDB, keeping all entry, trigger tracker, and sobriet-log data locally on your machine. You can also establish a custom browser-level privacy security PIN. No medical or personally identifiable information is transmitted or exposed to external servers."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "How does the AI weekly podcast synthesizer work?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "The built-in generative AI capabilities enable users to synthesize complete weekly podcasts on-demand. Using high-fidelity speech synthesis, the app reads out the customized, scriptured, and clinically optimized text tailored to your selected week's spiritual context and theme of recovery, allowing audio-guided healing exercises."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "Does this support multi-device clouds or offline logging?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "The application supports both full offline local functionality (using client-side IndexedDB caching) and optional cloud database synchronization. Authorized users can log into their secure personal accounts to instantly bridge their recovery progress and triggers seamlessly between other devices."
-              }
-            },
-            {
-              "@type": "Question",
-              "name": "How do the Sobriety Tracker and SOS Support buttons assist with relapse?",
-              "acceptedAnswer": {
-                "@type": "Answer",
-                "text": "The Sobriety Tracker dynamically computes active recovery streak stats. In times of extreme emotional weight or high relapse probability, the SOS button triggers an instant clinical-spiritual intervention suite. It offers guided scripture meditations, breathing tools, distraction prompts, and direct avenues to call professional rehabilitation counselors immediately."
-              }
-            }
-          ]
+          "name": "Sacred Steps to Redemption: The Year of Grace",
+          "description": "Official Brand Website & Recovery Portal - A 52-Week Recovery Journal of Reflection, Gratitude & Prayer."
         }
       ]
     }
     </script>
-    <title>Sacred Steps to Redemption</title>
+    <title>Sacred Steps to Redemption: The Year of Grace</title>
     <link rel="canonical" href="https://your-canonical-url.com" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400..700;1,400..700&family=Source+Sans+3:ital,wght@0,200..900;1,200..900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;600;700&family=Cinzel:wght@500;600;700;800&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600;1,700&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap" rel="stylesheet">
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/wordcloud@1.2.2/src/wordcloud2.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
       body {
-        font-family: 'Source Sans 3', sans-serif;
+        font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
         transition: background-color 0.3s, color 0.3s;
       }
-      h1, h2, h3, h4, h5, h6 {
-        font-family: 'Lora', serif;
+      h1, h2, h3, h4, h5, h6, .font-cinzel {
+        font-family: 'Cinzel', 'Cormorant Garamond', Georgia, serif;
+        letter-spacing: 0.02em;
+      }
+      .font-serif-quote, blockquote p {
+        font-family: 'Cormorant Garamond', Georgia, serif;
+      }
+      .font-script {
+        font-family: 'Caveat', cursive, sans-serif;
       }
 
-      /* --- THEME AND FONT-SIZE DEFINITIONS --- */
+      /* --- OFFICIAL BRAND PALETTE & THEME DEFINITIONS --- */
+      /* Dawn Gold: #D4AF37 (212, 175, 55) */
+      /* Deep Sacred Blue: #1C2A39 (28, 42, 57) */
+      /* Muted Sage: #7A8B7B (122, 139, 123) */
+      /* Warm Sand: #F9F6F0 (249, 246, 240) */
+      /* Off-Black Text: #2B2B2B (43, 43, 43) */
+
       :root {
-        /* Light Theme (default) */
-        --color-primary-100: 224 242 254; /* sky-100 */
-        --color-primary-200: 186 230 253; /* sky-200 */
-        --color-primary-500: 14 165 233; /* sky-500 */
-        --color-primary-600: 2 132 199; /* sky-600 */
-        --color-primary-700: 3 105 161; /* sky-700 */
-        --color-primary-text: 30 64 175; /* blue-800 */
-        --color-gradient-from: var(--color-primary-500);
-        --color-gradient-to: 129 140 248; /* indigo-400 */
-        --color-background: 248 250 252; /* slate-50 */
+        /* Light Theme (Warm Sand Base - Workbook & App Default) */
+        --color-primary-100: 238 242 239; /* Soft Sage Tint */
+        --color-primary-200: 215 225 217; /* Muted Sage 200 */
+        --color-primary-500: 122 139 123; /* Muted Sage (#7A8B7B) */
+        --color-primary-600: 28 42 57;    /* Deep Sacred Blue (#1C2A39) */
+        --color-primary-700: 18 28 38;    /* Anchor Deep Blue */
+        --color-primary-text: 28 42 57;   /* Deep Sacred Blue text */
+        --color-gradient-from: 28 42 57;
+        --color-gradient-to: 122 139 123;
+        --color-background: 249 246 240;  /* Warm Sand (#F9F6F0) */
         --color-card-background: 255 255 255;
-        --color-card-secondary-background: 248 250 252; /* slate-50 */
-        --color-text-main: 30 41 59; /* slate-800 */
-        --color-text-muted: 71 85 105; /* slate-600 */
-        --color-text-subtle: 148 163 184; /* slate-400 */
-        --color-border: 226 232 240; /* slate-200 */
-        --color-border-input: 203 213 225; /* slate-300 */
-        --color-accent-100: 255 251 235; /* amber-50 */
-        --color-accent-200: 254 243 224; /* orange-100 */
-        --color-accent-400: 251 191 36; /* amber-400 */
-        --color-accent-600: 234 88 12;  /* orange-600 */
-        --color-accent-800: 146 64 14; /* amber-800 */
+        --color-card-secondary-background: 244 240 232; /* Warm Sand Card */
+        --color-text-main: 43 43 43;      /* Off-Black Text (#2B2B2B) */
+        --color-text-muted: 90 102 114;   /* Refined Slate */
+        --color-text-subtle: 145 155 165;
+        --color-border: 228 221 210;      /* Warm Sand Border */
+        --color-border-input: 212 203 190;
+        --color-accent-100: 254 250 238;  /* Dawn Gold Light */
+        --color-accent-200: 248 238 210;  /* Dawn Gold 200 */
+        --color-accent-400: 212 175 55;   /* Dawn Gold (#D4AF37) */
+        --color-accent-600: 188 153 43;   /* Rich Gold */
+        --color-accent-800: 138 110 24;   /* Deep Gold */
       }
       
       html.dark {
-        /* Dark Theme - High Contrast */
-        --color-primary-100: 30 41 59; /* slate-800 */
-        --color-primary-200: 51 65 85; /* slate-700 */
-        --color-primary-500: 56 189 248; /* sky-400 */
-        --color-primary-600: 14 165 233; /* sky-500 */
-        --color-primary-700: 2 132 199; /* sky-600 */
-        --color-primary-text: 224 242 254; /* sky-100 */
-        --color-gradient-from: var(--color-primary-600);
-        --color-gradient-to: 99 102 241; /* indigo-500 */
-        --color-background: 2 6 23;      /* slate-950 */
-        --color-card-background: 15 23 42; /* slate-900 */
-        --color-card-secondary-background: 30 41 59; /* slate-800 */
-        --color-text-main: 241 245 249;   /* slate-100 */
-        --color-text-muted: 203 213 225;  /* slate-300 */
-        --color-text-subtle: 148 163 184; /* slate-400 */
-        --color-border: 30 41 59;        /* slate-800 */
-        --color-border-input: 51 65 85;   /* slate-700 */
-        --color-accent-100: 30 41 59; /* slate-800 */
-        --color-accent-200: 51 65 85; /* slate-700 */
-        --color-accent-400: 250 204 21; /* yellow-400 */
-        --color-accent-600: 234 179 8;  /* yellow-500 */
-        --color-accent-800: 252 211 77; /* amber-300 */
+        /* Dark Theme (Deep Sacred Blue Base - Audio & Ambient Visuals) */
+        --color-primary-100: 36 52 69;    /* Elevated Sacred Blue */
+        --color-primary-200: 48 68 89;
+        --color-primary-500: 212 175 55;  /* Dawn Gold (#D4AF37) */
+        --color-primary-600: 212 175 55;  /* Dawn Gold primary action */
+        --color-primary-700: 188 153 43;
+        --color-primary-text: 249 246 240; /* Warm Sand */
+        --color-gradient-from: 28 42 57;
+        --color-gradient-to: 18 28 38;
+        --color-background: 28 42 57;     /* Deep Sacred Blue (#1C2A39) */
+        --color-card-background: 20 31 43; /* Deep Night Sacred Blue */
+        --color-card-secondary-background: 34 49 66; /* Surface Sacred Blue */
+        --color-text-main: 249 246 240;   /* Warm Sand text (#F9F6F0) */
+        --color-text-muted: 195 205 215;  /* Soft Warm Gray */
+        --color-text-subtle: 140 155 170;
+        --color-border: 46 64 84;         /* Sacred Blue Border */
+        --color-border-input: 60 82 106;
+        --color-accent-100: 34 49 66;
+        --color-accent-200: 48 68 89;
+        --color-accent-400: 212 175 55;   /* Dawn Gold (#D4AF37) */
+        --color-accent-600: 212 175 55;
+        --color-accent-800: 248 238 210;
       }
 
       [data-font-size="sm"] body { font-size: 14px; }
       [data-font-size="base"] body { font-size: 16px; }
       [data-font-size="lg"] body { font-size: 18px; }
 
-      /* Semantic utility classes */
+      /* Semantic utility classes mapped to Brandbook */
       .bg-primary { background-color: rgb(var(--color-primary-600)); }
       .bg-primary-light { background-color: rgb(var(--color-primary-100)); }
-      .bg-primary-dark { background-color: rgb(var(--color-primary-500)); }
+      .bg-primary-dark { background-color: rgb(var(--color-primary-700)); }
       .bg-background { background-color: rgb(var(--color-background)); }
       .bg-card { background-color: rgb(var(--color-card-background)); }
       .bg-card-secondary { background-color: rgb(var(--color-card-secondary-background)); }
@@ -215,22 +244,34 @@
       .text-main { color: rgb(var(--color-text-main)); }
       .text-muted { color: rgb(var(--color-text-muted)); }
       .text-subtle { color: rgb(var(--color-text-subtle)); }
-      .text-on-primary { color: white; }
+      .text-on-primary { color: #FFFFFF; }
+      html.dark .text-on-primary { color: #1C2A39; } /* Deep Blue text on Gold in dark mode */
 
       .border-primary { border-color: rgb(var(--color-primary-500)); }
       .border-primary-light { border-color: rgb(var(--color-primary-200)); }
       .border-default { border-color: rgb(var(--color-border)); }
       .border-input { border-color: rgb(var(--color-border-input)); }
 
+      /* Specific Brand Tokens */
+      .text-gold { color: #D4AF37; }
+      .bg-gold { background-color: #D4AF37; }
+      .border-gold { border-color: #D4AF37; }
+      .text-sage { color: #7A8B7B; }
+      .bg-sage { background-color: #7A8B7B; }
+      .border-sage { border-color: #7A8B7B; }
+      .text-deep-blue { color: #1C2A39; }
+      .bg-deep-blue { background-color: #1C2A39; }
+      .border-deep-blue { border-color: #1C2A39; }
+
       .ring-primary:focus {
-        --tw-ring-color: rgb(var(--color-primary-500));
+        --tw-ring-color: #D4AF37;
       }
       .focus\:border-primary:focus {
-        border-color: rgb(var(--color-primary-500));
+        border-color: #D4AF37;
       }
 
       .gradient-milestone {
-         background-image: linear-gradient(to bottom right, rgb(var(--color-gradient-from)), rgb(var(--color-gradient-to)));
+         background-image: linear-gradient(135deg, #1C2A39 0%, #283e52 50%, #7A8B7B 100%);
       }
 
       /* Accent colors for streaks/gratitude */
@@ -244,6 +285,7 @@
       body {
         background-color: rgb(var(--color-background));
         color: rgb(var(--color-text-main));
+        letter-spacing: -0.01em;
       }
 
       /* --- PRINT STYLES --- */

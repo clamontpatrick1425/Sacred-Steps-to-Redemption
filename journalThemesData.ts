@@ -1,4 +1,5 @@
 import { WeeklyTheme } from './types';
+import { weeklyImagePrompts } from './weeklyImagePrompts';
 
 export const allWeeklyThemes: WeeklyTheme[] = [
   {
@@ -16,10 +17,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Richelle E. Goodrich"
     },
     prayer: "Lord, thank You for new beginnings and the hope of recovery. Help me embrace each day with faith and courage. In Jesus' name I pray, Amen.",
-    songTitle: "Beautiful Things",
+    songTitle: "The First Step",
+    songArtist: "Eli Hargrove",
+    songGenre: "Country Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/beautiful-things-placeholder",
-      appleMusic: "https://music.apple.com/us/album/beautiful-things-placeholder"
+      suno: "https://suno.com/s/7FSGyO91u0Smadt3",
+      spotify: "https://open.spotify.com/search/The%20First%20Step%20Eli%20Hargrove",
+      appleMusic: "https://music.apple.com/us/search?term=The%20First%20Step%20Eli%20Hargrove",
+      youtube: "https://www.youtube.com/results?search_query=The%20First%20Step%20Eli%20Hargrove%20gospel"
     }
   },
   {
@@ -37,10 +42,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Rikki Rogers"
     },
     prayer: "Father, I'm grateful that my weakness reveals Your strength. Help me lean on You daily. In Jesus' name I pray, Amen.",
-    songTitle: "Lord, I Need You",
+    songTitle: "Shattered Armor (Grace Enough)",
+    songArtist: "Judah Rell",
+    songGenre: "Gospel Rap",
     songLinks: {
-      spotify: "https://open.spotify.com/track/lord-i-need-you-placeholder",
-      appleMusic: "https://music.apple.com/us/album/lord-i-need-you-placeholder"
+      suno: "https://suno.com/song/f3ed842f-2a7d-4acc-a0c6-155d4bd963a4",
+      spotify: "https://open.spotify.com/search/Shattered%20Armor%20(Grace%20Enough)%20Judah%20Rell",
+      appleMusic: "https://music.apple.com/us/search?term=Shattered%20Armor%20(Grace%20Enough)%20Judah%20Rell",
+      youtube: "https://www.youtube.com/results?search_query=Shattered%20Armor%20(Grace%20Enough)%20Judah%20Rell%20gospel"
     }
   },
   {
@@ -58,10 +67,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Helen Keller"
     },
     prayer: "God, thank You for the people who support me. Help me be a blessing to others in their journey. In Jesus' name I pray, Amen.",
-    songTitle: "Lean on Me",
+    songTitle: "Shoulder to Shoulder",
+    songArtist: "Kojo Bright",
+    songGenre: "Afroswing-Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/lean-on-me-placeholder",
-      appleMusic: "https://music.apple.com/us/album/lean-on-me-placeholder"
+      suno: "https://suno.com/search?q=Shoulder%20to%20Shoulder%20Kojo%20Bright",
+      spotify: "https://open.spotify.com/search/Shoulder%20to%20Shoulder%20Kojo%20Bright",
+      appleMusic: "https://music.apple.com/us/search?term=Shoulder%20to%20Shoulder%20Kojo%20Bright",
+      youtube: "https://www.youtube.com/results?search_query=Shoulder%20to%20Shoulder%20Kojo%20Bright%20gospel"
     }
   },
   {
@@ -79,10 +92,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Robert Collier"
     },
     prayer: "Lord, thank You for daily victories. Help me celebrate progress and trust in Your timing. In Jesus' name I pray, Amen.",
-    songTitle: "Victory in Jesus",
+    songTitle: "Laugh at Tomorrow",
+    songArtist: "Zaria Lumen",
+    songGenre: "Gospel House",
     songLinks: {
-      spotify: "https://open.spotify.com/track/victory-in-jesus-placeholder",
-      appleMusic: "https://music.apple.com/us/album/victory-in-jesus-placeholder"
+      suno: "https://suno.com/search?q=Laugh%20at%20Tomorrow%20Zaria%20Lumen",
+      spotify: "https://open.spotify.com/search/Laugh%20at%20Tomorrow%20Zaria%20Lumen",
+      appleMusic: "https://music.apple.com/us/search?term=Laugh%20at%20Tomorrow%20Zaria%20Lumen",
+      youtube: "https://www.youtube.com/results?search_query=Laugh%20at%20Tomorrow%20Zaria%20Lumen%20gospel"
     }
   },
   {
@@ -100,10 +117,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "Faithful God, thank You for never giving up on me. Help me trust in Your constant love and presence. In Jesus' name I pray, Amen.",
-    songTitle: "Great Is Thy Faithfulness",
+    songTitle: "River That Never Runs Dry",
+    songArtist: "Naledi Groove",
+    songGenre: "Amapiano-Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/great-is-thy-faithfulness-placeholder",
-      appleMusic: "https://music.apple.com/us/album/great-is-thy-faithfulness-placeholder"
+      suno: "https://suno.com/search?q=River%20That%20Never%20Runs%20Dry%20Naledi%20Groove",
+      spotify: "https://open.spotify.com/search/River%20That%20Never%20Runs%20Dry%20Naledi%20Groove",
+      appleMusic: "https://music.apple.com/us/search?term=River%20That%20Never%20Runs%20Dry%20Naledi%20Groove",
+      youtube: "https://www.youtube.com/results?search_query=River%20That%20Never%20Runs%20Dry%20Naledi%20Groove%20gospel"
     }
   },
   {
@@ -121,10 +142,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Corrie ten Boom"
     },
     prayer: "God, thank You for Your complete forgiveness. Help me live in that freedom and extend it to others. In Jesus' name I pray, Amen.",
-    songTitle: "East to West",
+    songTitle: "The Distance You Made",
+    songArtist: "Mose Ardell",
+    songGenre: "Gospel Blues",
     songLinks: {
-      spotify: "https://open.spotify.com/track/east-to-west-placeholder",
-      appleMusic: "https://music.apple.com/us/album/east-to-west-placeholder"
+      suno: "https://suno.com/search?q=The%20Distance%20You%20Made%20Mose%20Ardell",
+      spotify: "https://open.spotify.com/search/The%20Distance%20You%20Made%20Mose%20Ardell",
+      appleMusic: "https://music.apple.com/us/search?term=The%20Distance%20You%20Made%20Mose%20Ardell",
+      youtube: "https://www.youtube.com/results?search_query=The%20Distance%20You%20Made%20Mose%20Ardell%20gospel"
     }
   },
   {
@@ -142,10 +167,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "Lord, thank You for the wisdom gained through my struggles. Help me use it to glorify You and help others. In Jesus' name I pray, Amen.",
-    songTitle: "Give Me Wisdom",
+    songTitle: "What the Fall Taught Me",
+    songArtist: "Kwame Uplift",
+    songGenre: "Afrobeats-Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/give-me-wisdom-placeholder",
-      appleMusic: "https://music.apple.com/us/album/give-me-wisdom-placeholder"
+      suno: "https://suno.com/search?q=What%20the%20Fall%20Taught%20Me%20Kwame%20Uplift",
+      spotify: "https://open.spotify.com/search/What%20the%20Fall%20Taught%20Me%20Kwame%20Uplift",
+      appleMusic: "https://music.apple.com/us/search?term=What%20the%20Fall%20Taught%20Me%20Kwame%20Uplift",
+      youtube: "https://www.youtube.com/results?search_query=What%20the%20Fall%20Taught%20Me%20Kwame%20Uplift%20gospel"
     }
   },
   {
@@ -163,10 +192,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Jim Rohn"
     },
     prayer: "God, thank You for healing my body. Help me honor You by taking care of this temple. In Jesus' name I pray, Amen.",
-    songTitle: "Healer",
+    songTitle: "Temple Restored",
+    songArtist: "Simone Reyner",
+    songGenre: "Gospel Soul",
     songLinks: {
-      spotify: "https://open.spotify.com/track/healer-placeholder",
-      appleMusic: "https://music.apple.com/us/album/healer-placeholder"
+      suno: "https://suno.com/search?q=Temple%20Restored%20Simone%20Reyner",
+      spotify: "https://open.spotify.com/search/Temple%20Restored%20Simone%20Reyner",
+      appleMusic: "https://music.apple.com/us/search?term=Temple%20Restored%20Simone%20Reyner",
+      youtube: "https://www.youtube.com/results?search_query=Temple%20Restored%20Simone%20Reyner%20gospel"
     }
   },
   {
@@ -184,10 +217,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "Father, thank You for mental clarity. Help me use my renewed mind to serve You better. In Jesus' name I pray, Amen.",
-    songTitle: "Renew My Mind",
+    songTitle: "Above the Noise",
+    songArtist: "Femi Highgate",
+    songGenre: "Afro-Highlife Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/renew-my-mind-placeholder",
-      appleMusic: "https://music.apple.com/us/album/renew-my-mind-placeholder"
+      suno: "https://suno.com/search?q=Above%20the%20Noise%20Femi%20Highgate",
+      spotify: "https://open.spotify.com/search/Above%20the%20Noise%20Femi%20Highgate",
+      appleMusic: "https://music.apple.com/us/search?term=Above%20the%20Noise%20Femi%20Highgate",
+      youtube: "https://www.youtube.com/results?search_query=Above%20the%20Noise%20Femi%20Highgate%20gospel"
     }
   },
   {
@@ -205,10 +242,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "Lord, thank You for spiritual growth through recovery. Continue to deepen my faith and understanding. In Jesus' name I pray, Amen.",
-    songTitle: "Show Me Your Way",
+    songTitle: "Deeper Roots",
+    songArtist: "Judah Rell",
+    songGenre: "Gospel Rap",
     songLinks: {
-      spotify: "https://open.spotify.com/track/show-me-your-way-placeholder",
-      appleMusic: "https://music.apple.com/us/album/show-me-your-way-placeholder"
+      suno: "https://suno.com/search?q=Deeper%20Roots%20Judah%20Rell",
+      spotify: "https://open.spotify.com/search/Deeper%20Roots%20Judah%20Rell",
+      appleMusic: "https://music.apple.com/us/search?term=Deeper%20Roots%20Judah%20Rell",
+      youtube: "https://www.youtube.com/results?search_query=Deeper%20Roots%20Judah%20Rell%20gospel"
     }
   },
   {
@@ -226,10 +267,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "God, thank You for giving my life purpose and meaning. Help me live according to Your will. In Jesus' name I pray, Amen.",
-    songTitle: "Thy Will",
+    songTitle: "The Life You Meant",
+    songArtist: "Zaria Lumen",
+    songGenre: "Gospel House",
     songLinks: {
-      spotify: "https://open.spotify.com/track/thy-will-placeholder",
-      appleMusic: "https://music.apple.com/us/album/thy-will-placeholder"
+      suno: "https://suno.com/search?q=The%20Life%20You%20Meant%20Zaria%20Lumen",
+      spotify: "https://open.spotify.com/search/The%20Life%20You%20Meant%20Zaria%20Lumen",
+      appleMusic: "https://music.apple.com/us/search?term=The%20Life%20You%20Meant%20Zaria%20Lumen",
+      youtube: "https://www.youtube.com/results?search_query=The%20Life%20You%20Meant%20Zaria%20Lumen%20gospel"
     }
   },
   {
@@ -247,10 +292,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "Merciful God, thank You for second chances. Help me make the most of every opportunity You give me. In Jesus' name I pray, Amen.",
-    songTitle: "Grace Like Rain",
+    songTitle: "The Door Stayed Open",
+    songArtist: "Mose Ardell",
+    songGenre: "Gospel Blues",
     songLinks: {
-      spotify: "https://open.spotify.com/track/grace-like-rain-placeholder",
-      appleMusic: "https://music.apple.com/us/album/grace-like-rain-placeholder"
+      suno: "https://suno.com/search?q=The%20Door%20Stayed%20Open%20Mose%20Ardell",
+      spotify: "https://open.spotify.com/search/The%20Door%20Stayed%20Open%20Mose%20Ardell",
+      appleMusic: "https://music.apple.com/us/search?term=The%20Door%20Stayed%20Open%20Mose%20Ardell",
+      youtube: "https://www.youtube.com/results?search_query=The%20Door%20Stayed%20Open%20Mose%20Ardell%20gospel"
     }
   },
   {
@@ -268,10 +317,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "Lord, thank You for restored relationships. Help me continue to nurture and value these connections. In Jesus' name I pray, Amen.",
-    songTitle: "Reconciliation Song",
+    songTitle: "The Tables' Set Again",
+    songArtist: "Eli Hargrove",
+    songGenre: "Country Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/reconciliation-song-placeholder",
-      appleMusic: "https://music.apple.com/us/album/reconciliation-song-placeholder"
+      suno: "https://suno.com/search?q=The%20Tables'%20Set%20Again%20Eli%20Hargrove",
+      spotify: "https://open.spotify.com/search/The%20Tables'%20Set%20Again%20Eli%20Hargrove",
+      appleMusic: "https://music.apple.com/us/search?term=The%20Tables'%20Set%20Again%20Eli%20Hargrove",
+      youtube: "https://www.youtube.com/results?search_query=The%20Tables'%20Set%20Again%20Eli%20Hargrove%20gospel"
     }
   },
   {
@@ -289,10 +342,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "God, thank You for professional opportunities. Help me work with integrity and serve others through my career. In Jesus' name I pray, Amen.",
-    songTitle: "Work for the Lord",
+    songTitle: "Hands of Purpose",
+    songArtist: "Femi Highgate",
+    songGenre: "Afro-Highlife Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/work-for-the-lord-placeholder",
-      appleMusic: "https://music.apple.com/us/album/work-for-the-lord-placeholder"
+      suno: "https://suno.com/search?q=Hands%20of%20Purpose%20Femi%20Highgate",
+      spotify: "https://open.spotify.com/search/Hands%20of%20Purpose%20Femi%20Highgate",
+      appleMusic: "https://music.apple.com/us/search?term=Hands%20of%20Purpose%20Femi%20Highgate",
+      youtube: "https://www.youtube.com/results?search_query=Hands%20of%20Purpose%20Femi%20Highgate%20gospel"
     }
   },
   {
@@ -310,10 +367,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Dave Ramsey"
     },
     prayer: "Father, thank You for financial restoration. Help me be a faithful steward of all You provide. In Jesus' name I pray, Amen.",
-    songTitle: "Faithful Steward",
+    songTitle: "Ledger of Peace",
+    songArtist: "Naledi Groove",
+    songGenre: "Amapiano-Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/faithful-steward-placeholder",
-      appleMusic: "https://music.apple.com/us/album/faithful-steward-placeholder"
+      suno: "https://suno.com/search?q=Ledger%20of%20Peace%20Naledi%20Groove",
+      spotify: "https://open.spotify.com/search/Ledger%20of%20Peace%20Naledi%20Groove",
+      appleMusic: "https://music.apple.com/us/search?term=Ledger%20of%20Peace%20Naledi%20Groove",
+      youtube: "https://www.youtube.com/results?search_query=Ledger%20of%20Peace%20Naledi%20Groove%20gospel"
     }
   },
   {
@@ -331,10 +392,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "Lord, thank You for emotional healing. Continue to mend my heart and teach me healthy ways to process feelings. In Jesus' name I pray, Amen.",
-    songTitle: "Broken Vessels",
+    songTitle: "Setting the Weight Down",
+    songArtist: "Simone Reyner",
+    songGenre: "Gospel Soul",
     songLinks: {
-      spotify: "https://open.spotify.com/track/broken-vessels-placeholder",
-      appleMusic: "https://music.apple.com/us/album/broken-vessels-placeholder"
+      suno: "https://suno.com/search?q=Setting%20the%20Weight%20Down%20Simone%20Reyner",
+      spotify: "https://open.spotify.com/search/Setting%20the%20Weight%20Down%20Simone%20Reyner",
+      appleMusic: "https://music.apple.com/us/search?term=Setting%20the%20Weight%20Down%20Simone%20Reyner",
+      youtube: "https://www.youtube.com/results?search_query=Setting%20the%20Weight%20Down%20Simone%20Reyner%20gospel"
     }
   },
   {
@@ -352,10 +417,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Nathaniel Branden"
     },
     prayer: "God, thank You for treatment resources and professional help. Guide me to use these tools wisely. In Jesus' name I pray, Amen.",
-    songTitle: "Help Is on the Way",
+    songTitle: "The Room Where Healing Starts",
+    songArtist: "Kojo Bright",
+    songGenre: "Afroswing-Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/help-is-on-the-way-placeholder",
-      appleMusic: "https://music.apple.com/us/album/help-is-on-the-way-placeholder"
+      suno: "https://suno.com/search?q=The%20Room%20Where%20Healing%20Starts%20Kojo%20Bright",
+      spotify: "https://open.spotify.com/search/The%20Room%20Where%20Healing%20Starts%20Kojo%20Bright",
+      appleMusic: "https://music.apple.com/us/search?term=The%20Room%20Where%20Healing%20Starts%20Kojo%20Bright",
+      youtube: "https://www.youtube.com/results?search_query=The%20Room%20Where%20Healing%20Starts%20Kojo%20Bright%20gospel"
     }
   },
   {
@@ -373,10 +442,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Emily Dickinson"
     },
     prayer: "God of hope, thank You for restoring my optimism about the future. Help me share this hope with others. In Jesus' name I pray, Amen.",
-    songTitle: "Living Hope",
+    songTitle: "Feathers in the Dawn",
+    songArtist: "Naledi Groove",
+    songGenre: "Amapiano-Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/living-hope-placeholder",
-      appleMusic: "https://music.apple.com/us/album/living-hope-placeholder"
+      suno: "https://suno.com/search?q=Feathers%20in%20the%20Dawn%20Naledi%20Groove",
+      spotify: "https://open.spotify.com/search/Feathers%20in%20the%20Dawn%20Naledi%20Groove",
+      appleMusic: "https://music.apple.com/us/search?term=Feathers%20in%20the%20Dawn%20Naledi%20Groove",
+      youtube: "https://www.youtube.com/results?search_query=Feathers%20in%20the%20Dawn%20Naledi%20Groove%20gospel"
     }
   },
   {
@@ -394,10 +467,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Mahatma Gandhi"
     },
     prayer: "Lord, thank You for legal resolution and second chances. Help me live as a responsible citizen. In Jesus' name I pray, Amen.",
-    songTitle: "Redeemed",
+    songTitle: "The Gavel Fell",
+    songArtist: "Colt Ferrin",
+    songGenre: "Country Drill",
     songLinks: {
-      spotify: "https://open.spotify.com/track/redeemed-placeholder",
-      appleMusic: "https://music.apple.com/us/album/redeemed-placeholder"
+      suno: "https://suno.com/search?q=The%20Gavel%20Fell%20Colt%20Ferrin",
+      spotify: "https://open.spotify.com/search/The%20Gavel%20Fell%20Colt%20Ferrin",
+      appleMusic: "https://music.apple.com/us/search?term=The%20Gavel%20Fell%20Colt%20Ferrin",
+      youtube: "https://www.youtube.com/results?search_query=The%20Gavel%20Fell%20Colt%20Ferrin%20gospel"
     }
   },
   {
@@ -415,10 +492,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Pema Chödrön"
     },
     prayer: "Father, thank You for helping me see my worth through Your eyes. Help me live with confidence in Your love. In Jesus' name I pray, Amen.",
-    songTitle: "Who You Say I Am",
+    songTitle: "Image Restored",
+    songArtist: "Kwame Uplift",
+    songGenre: "Afrobeats-Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/who-you-say-i-am-placeholder",
-      appleMusic: "https://music.apple.com/us/album/who-you-say-i-am-placeholder"
+      suno: "https://suno.com/search?q=Image%20Restored%20Kwame%20Uplift",
+      spotify: "https://open.spotify.com/search/Image%20Restored%20Kwame%20Uplift",
+      appleMusic: "https://music.apple.com/us/search?term=Image%20Restored%20Kwame%20Uplift",
+      youtube: "https://www.youtube.com/results?search_query=Image%20Restored%20Kwame%20Uplift%20gospel"
     }
   },
   {
@@ -436,10 +517,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Eugene Peterson"
     },
     prayer: "God, thank You for spiritual community and fellowship. Help me contribute to and benefit from this support. In Jesus' name I pray, Amen.",
-    songTitle: "We Are One",
+    songTitle: "Sanctuary of Souls",
+    songArtist: "Simone Reyner",
+    songGenre: "Gospel Soul",
     songLinks: {
-      spotify: "https://open.spotify.com/track/we-are-one-placeholder",
-      appleMusic: "https://music.apple.com/us/album/we-are-one-placeholder"
+      suno: "https://suno.com/search?q=Sanctuary%20of%20Souls%20Simone%20Reyner",
+      spotify: "https://open.spotify.com/search/Sanctuary%20of%20Souls%20Simone%20Reyner",
+      appleMusic: "https://music.apple.com/us/search?term=Sanctuary%20of%20Souls%20Simone%20Reyner",
+      youtube: "https://www.youtube.com/results?search_query=Sanctuary%20of%20Souls%20Simone%20Reyner%20gospel"
     }
   },
   {
@@ -457,10 +542,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "Lord, thank You for healthy coping skills. Help me continue to turn to You in times of stress. In Jesus' name I pray, Amen.",
-    songTitle: "Cast My Cares",
+    songTitle: "Anchor in the Gale",
+    songArtist: "Mose Ardell",
+    songGenre: "Gospel Blues",
     songLinks: {
-      spotify: "https://open.spotify.com/track/cast-my-cares-placeholder",
-      appleMusic: "https://music.apple.com/us/album/cast-my-cares-placeholder"
+      suno: "https://suno.com/search?q=Anchor%20in%20the%20Gale%20Mose%20Ardell",
+      spotify: "https://open.spotify.com/search/Anchor%20in%20the%20Gale%20Mose%20Ardell",
+      appleMusic: "https://music.apple.com/us/search?term=Anchor%20in%20the%20Gale%20Mose%20Ardell",
+      youtube: "https://www.youtube.com/results?search_query=Anchor%20in%20the%20Gale%20Mose%20Ardell%20gospel"
     }
   },
   {
@@ -478,10 +567,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "God, thank You for recovery milestones. Help me celebrate progress while staying focused on the journey ahead. In Jesus' name I pray, Amen.",
-    songTitle: "Milestones",
+    songTitle: "Milestone Marker",
+    songArtist: "Kwame Uplift",
+    songGenre: "Afrobeats-Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/milestones-placeholder",
-      appleMusic: "https://music.apple.com/us/album/milestones-placeholder"
+      suno: "https://suno.com/search?q=Milestone%20Marker%20Kwame%20Uplift",
+      spotify: "https://open.spotify.com/search/Milestone%20Marker%20Kwame%20Uplift",
+      appleMusic: "https://music.apple.com/us/search?term=Milestone%20Marker%20Kwame%20Uplift",
+      youtube: "https://www.youtube.com/results?search_query=Milestone%20Marker%20Kwame%20Uplift%20gospel"
     }
   },
   {
@@ -499,10 +592,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "Father, thank You for family restoration. Help me continue to build loving, healthy family relationships. In Jesus' name I pray, Amen.",
-    songTitle: "Restore My Home",
+    songTitle: "Table in the Rain",
+    songArtist: "Femi Highgate",
+    songGenre: "Afro-Highlife Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/restore-my-home-placeholder",
-      appleMusic: "https://music.apple.com/us/album/restore-my-home-placeholder"
+      suno: "https://suno.com/search?q=Table%20in%20the%20Rain%20Femi%20Highgate",
+      spotify: "https://open.spotify.com/search/Table%20in%20the%20Rain%20Femi%20Highgate",
+      appleMusic: "https://music.apple.com/us/search?term=Table%20in%20the%20Rain%20Femi%20Highgate",
+      youtube: "https://www.youtube.com/results?search_query=Table%20in%20the%20Rain%20Femi%20Highgate%20gospel"
     }
   },
   {
@@ -520,10 +617,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Buddha"
     },
     prayer: "Prince of Peace, thank You for the inner calm that comes from knowing You. Help me maintain this peace. In Jesus' name I pray, Amen.",
-    songTitle: "It Is Well with My Soul",
+    songTitle: "Quiet in the Chaos",
+    songArtist: "Judah Rell",
+    songGenre: "Gospel Rap",
     songLinks: {
-      spotify: "https://open.spotify.com/track/it-is-well-with-my-soul-placeholder",
-      appleMusic: "https://music.apple.com/us/album/it-is-well-with-my-soul-placeholder"
+      suno: "https://suno.com/search?q=Quiet%20in%20the%20Chaos%20Judah%20Rell",
+      spotify: "https://open.spotify.com/search/Quiet%20in%20the%20Chaos%20Judah%20Rell",
+      appleMusic: "https://music.apple.com/us/search?term=Quiet%20in%20the%20Chaos%20Judah%20Rell",
+      youtube: "https://www.youtube.com/results?search_query=Quiet%20in%20the%20Chaos%20Judah%20Rell%20gospel"
     }
   },
   {
@@ -541,10 +642,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Melody Beattie"
     },
     prayer: "God, thank You for the gift of gratitude. Help me maintain a thankful heart in all circumstances. In Jesus' name I pray, Amen.",
-    songTitle: "Thank You Lord",
+    songTitle: "Ledger of Light",
+    songArtist: "Zaria Lumen",
+    songGenre: "Gospel House",
     songLinks: {
-      spotify: "https://open.spotify.com/track/thank-you-lord-placeholder",
-      appleMusic: "https://music.apple.com/us/album/thank-you-lord-placeholder"
+      suno: "https://suno.com/search?q=Ledger%20of%20Light%20Zaria%20Lumen",
+      spotify: "https://open.spotify.com/search/Ledger%20of%20Light%20Zaria%20Lumen",
+      appleMusic: "https://music.apple.com/us/search?term=Ledger%20of%20Light%20Zaria%20Lumen",
+      youtube: "https://www.youtube.com/results?search_query=Ledger%20of%20Light%20Zaria%20Lumen%20gospel"
     }
   },
   {
@@ -562,10 +667,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "Lord, thank You for teaching me healthy boundaries. Help me maintain them with love and wisdom. In Jesus' name I pray, Amen.",
-    songTitle: "Guard Your Heart",
+    songTitle: "Gates of Grace",
+    songArtist: "Simone Reyner",
+    songGenre: "Gospel Soul",
     songLinks: {
-      spotify: "https://open.spotify.com/track/guard-your-heart-placeholder",
-      appleMusic: "https://music.apple.com/us/album/guard-your-heart-placeholder"
+      suno: "https://suno.com/search?q=Gates%20of%20Grace%20Simone%20Reyner",
+      spotify: "https://open.spotify.com/search/Gates%20of%20Grace%20Simone%20Reyner",
+      appleMusic: "https://music.apple.com/us/search?term=Gates%20of%20Grace%20Simone%20Reyner",
+      youtube: "https://www.youtube.com/results?search_query=Gates%20of%20Grace%20Simone%20Reyner%20gospel"
     }
   },
   {
@@ -583,10 +692,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Mahatma Gandhi"
     },
     prayer: "God, thank You for opportunities to serve. Help me use my experience to help others find hope and healing. In Jesus' name I pray, Amen.",
-    songTitle: "Make Me a Channel of Your Peace",
+    songTitle: "Hands That Hold",
+    songArtist: "Judah Rell",
+    songGenre: "Gospel Rap",
     songLinks: {
-      spotify: "https://open.spotify.com/track/make-me-a-channel-placeholder",
-      appleMusic: "https://music.apple.com/us/album/make-me-a-channel-placeholder"
+      suno: "https://suno.com/search?q=Hands%20That%20Hold%20Judah%20Rell",
+      spotify: "https://open.spotify.com/search/Hands%20That%20Hold%20Judah%20Rell",
+      appleMusic: "https://music.apple.com/us/search?term=Hands%20That%20Hold%20Judah%20Rell",
+      youtube: "https://www.youtube.com/results?search_query=Hands%20That%20Hold%20Judah%20Rell%20gospel"
     }
   },
   {
@@ -604,10 +717,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Thomas Jefferson"
     },
     prayer: "God of truth, thank You for freeing me from deception. Help me continue to live with integrity and honesty. In Jesus' name I pray, Amen.",
-    songTitle: "The Truth Sets You Free",
+    songTitle: "No More Hiding",
+    songArtist: "Kojo Bright",
+    songGenre: "Afroswing-Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/truth-placeholder",
-      appleMusic: "https://music.apple.com/us/album/truth-placeholder"
+      suno: "https://suno.com/search?q=No%20More%20Hiding%20Kojo%20Bright",
+      spotify: "https://open.spotify.com/search/No%20More%20Hiding%20Kojo%20Bright",
+      appleMusic: "https://music.apple.com/us/search?term=No%20More%20Hiding%20Kojo%20Bright",
+      youtube: "https://www.youtube.com/results?search_query=No%20More%20Hiding%20Kojo%20Bright%20gospel"
     }
   },
   {
@@ -625,10 +742,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Walter Elliot"
     },
     prayer: "Lord, thank You for the strength to persevere. Help me continue when the journey gets difficult. In Jesus' name I pray, Amen.",
-    songTitle: "Never Give Up",
+    songTitle: "The Long Haul",
+    songArtist: "Judah Rell",
+    songGenre: "Gospel Rap",
     songLinks: {
-      spotify: "https://open.spotify.com/track/never-give-up-placeholder",
-      appleMusic: "https://music.apple.com/us/album/never-give-up-placeholder"
+      suno: "https://suno.com/search?q=The%20Long%20Haul%20Judah%20Rell",
+      spotify: "https://open.spotify.com/search/The%20Long%20Haul%20Judah%20Rell",
+      appleMusic: "https://music.apple.com/us/search?term=The%20Long%20Haul%20Judah%20Rell",
+      youtube: "https://www.youtube.com/results?search_query=The%20Long%20Haul%20Judah%20Rell%20gospel"
     }
   },
   {
@@ -646,10 +767,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Richard Wagner"
     },
     prayer: "God, thank You for restoring joy to my life. Help me find happiness in simple blessings and Your presence. In Jesus' name I pray, Amen.",
-    songTitle: "Joy UnsPeakable",
+    songTitle: "Strength in the Song (Joy Rediscovered)",
+    songArtist: "Simone Reyner",
+    songGenre: "Gospel Soul",
     songLinks: {
-      spotify: "https://open.spotify.com/track/joy-unspeakable-placeholder",
-      appleMusic: "https://music.apple.com/us/album/joy-unspeakable-placeholder"
+      suno: "https://suno.com/search?q=Strength%20in%20the%20Song%20(Joy%20Rediscovered)%20Simone%20Reyner",
+      spotify: "https://open.spotify.com/search/Strength%20in%20the%20Song%20(Joy%20Rediscovered)%20Simone%20Reyner",
+      appleMusic: "https://music.apple.com/us/search?term=Strength%20in%20the%20Song%20(Joy%20Rediscovered)%20Simone%20Reyner",
+      youtube: "https://www.youtube.com/results?search_query=Strength%20in%20the%20Song%20(Joy%20Rediscovered)%20Simone%20Reyner%20gospel"
     }
   },
   {
@@ -667,10 +792,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "C.S. Lewis"
     },
     prayer: "Lord, thank You for teaching me humility. Help me remain humble while growing in confidence. In Jesus' name I pray, Amen.",
-    songTitle: "Humble Me",
+    songTitle: "Thinking of Myself Less",
+    songArtist: "Eli Hargrove",
+    songGenre: "Country Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/humble-me-placeholder",
-      appleMusic: "https://music.apple.com/us/album/humble-me-placeholder"
+      suno: "https://suno.com/search?q=Thinking%20of%20Myself%20Less%20Eli%20Hargrove",
+      spotify: "https://open.spotify.com/search/Thinking%20of%20Myself%20Less%20Eli%20Hargrove",
+      appleMusic: "https://music.apple.com/us/search?term=Thinking%20of%20Myself%20Less%20Eli%20Hargrove",
+      youtube: "https://www.youtube.com/results?search_query=Thinking%20of%20Myself%20Less%20Eli%20Hargrove%20gospel"
     }
   },
   {
@@ -688,10 +817,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Mark Twain"
     },
     prayer: "God, thank You for giving me courage. Help me continue to face challenges with Your strength. In Jesus' name I pray, Amen.",
-    songTitle: "Courageous",
+    songTitle: "Iron in the Fire",
+    songArtist: "Marcus Vale",
+    songGenre: "Gospel Trap",
     songLinks: {
-      spotify: "https://open.spotify.com/track/courageous-placeholder",
-      appleMusic: "https://music.apple.com/us/album/courageous-placeholder"
+      suno: "https://suno.com/search?q=Iron%20in%20the%20Fire%20Marcus%20Vale",
+      spotify: "https://open.spotify.com/search/Iron%20in%20the%20Fire%20Marcus%20Vale",
+      appleMusic: "https://music.apple.com/us/search?term=Iron%20in%20the%20Fire%20Marcus%20Vale",
+      youtube: "https://www.youtube.com/results?search_query=Iron%20in%20the%20Fire%20Marcus%20Vale%20gospel"
     }
   },
   {
@@ -709,10 +842,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Jim Rohn"
     },
     prayer: "Father, thank You for teaching me discipline. Help me maintain structure and self-control in all areas. In Jesus' name I pray, Amen.",
-    songTitle: "Self-Control",
+    songTitle: "The Bridge of Iron",
+    songArtist: "Dre Solace",
+    songGenre: "Gospel Drill",
     songLinks: {
-      spotify: "https://open.spotify.com/track/self-control-placeholder",
-      appleMusic: "https://music.apple.com/us/album/self-control-placeholder"
+      suno: "https://suno.com/search?q=The%20Bridge%20of%20Iron%20Dre%20Solace",
+      spotify: "https://open.spotify.com/search/The%20Bridge%20of%20Iron%20Dre%20Solace",
+      appleMusic: "https://music.apple.com/us/search?term=The%20Bridge%20of%20Iron%20Dre%20Solace",
+      youtube: "https://www.youtube.com/results?search_query=The%20Bridge%20of%20Iron%20Dre%20Solace%20gospel"
     }
   },
   {
@@ -730,10 +867,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Joyce Meyer"
     },
     prayer: "Lord, thank You for teaching me patience. Help me trust Your timing and remain patient with myself and others. In Jesus' name I pray, Amen.",
-    songTitle: "Wait on You",
+    songTitle: "Slow Burn",
+    songArtist: "Colt Ferrin",
+    songGenre: "Country Drill",
     songLinks: {
-      spotify: "https://open.spotify.com/track/wait-on-you-placeholder",
-      appleMusic: "https://music.apple.com/us/album/wait-on-you-placeholder"
+      suno: "https://suno.com/search?q=Slow%20Burn%20Colt%20Ferrin",
+      spotify: "https://open.spotify.com/search/Slow%20Burn%20Colt%20Ferrin",
+      appleMusic: "https://music.apple.com/us/search?term=Slow%20Burn%20Colt%20Ferrin",
+      youtube: "https://www.youtube.com/results?search_query=Slow%20Burn%20Colt%20Ferrin%20gospel"
     }
   },
   {
@@ -751,10 +892,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Albert Einstein"
     },
     prayer: "God, thank You for the wisdom gained through experience. Help me continue to seek and apply Your wisdom. In Jesus' name I pray, Amen.",
-    songTitle: "Begin with Wisdom",
+    songTitle: "Wisdom",
+    songArtist: "Mose Ardell",
+    songGenre: "Gospel Blues",
     songLinks: {
-      spotify: "https://open.spotify.com/track/begin-with-wisdom-placeholder",
-      appleMusic: "https://music.apple.com/us/album/begin-with-wisdom-placeholder"
+      suno: "https://suno.com/search?q=Wisdom%20Mose%20Ardell",
+      spotify: "https://open.spotify.com/search/Wisdom%20Mose%20Ardell",
+      appleMusic: "https://music.apple.com/us/search?term=Wisdom%20Mose%20Ardell",
+      youtube: "https://www.youtube.com/results?search_query=Wisdom%20Mose%20Ardell%20gospel"
     }
   },
   {
@@ -772,10 +917,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Elizabeth Edwards"
     },
     prayer: "Lord, thank You for resilience. Help me bounce back from setbacks and continue growing stronger. In Jesus' name I pray, Amen.",
-    songTitle: "Bouncing Back",
+    songTitle: "Bounce Back",
+    songArtist: "Simone Reyner",
+    songGenre: "Gospel Soul",
     songLinks: {
-      spotify: "https://open.spotify.com/track/bouncing-back-placeholder",
-      appleMusic: "https://music.apple.com/us/album/bouncing-back-placeholder"
+      suno: "https://suno.com/search?q=Bounce%20Back%20Simone%20Reyner",
+      spotify: "https://open.spotify.com/search/Bounce%20Back%20Simone%20Reyner",
+      appleMusic: "https://music.apple.com/us/search?term=Bounce%20Back%20Simone%20Reyner",
+      youtube: "https://www.youtube.com/results?search_query=Bounce%20Back%20Simone%20Reyner%20gospel"
     }
   },
   {
@@ -794,9 +943,13 @@ export const allWeeklyThemes: WeeklyTheme[] = [
     },
     prayer: "God, thank You for renewed dreams and aspirations. Help me pursue goals that honor You and serve others. In Jesus' name I pray, Amen.",
     songTitle: "Renewed Dreams",
+    songArtist: "Eli Hargrove",
+    songGenre: "Country Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/renewed-dreams-placeholder",
-      appleMusic: "https://music.apple.com/us/album/renewed-dreams-placeholder"
+      suno: "https://suno.com/search?q=Renewed%20Dreams%20Eli%20Hargrove",
+      spotify: "https://open.spotify.com/search/Renewed%20Dreams%20Eli%20Hargrove",
+      appleMusic: "https://music.apple.com/us/search?term=Renewed%20Dreams%20Eli%20Hargrove",
+      youtube: "https://www.youtube.com/results?search_query=Renewed%20Dreams%20Eli%20Hargrove%20gospel"
     }
   },
   {
@@ -814,10 +967,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Dalai Lama"
     },
     prayer: "Lord, thank You for growing compassion in my heart. Help me extend understanding and kindness to all people. In Jesus' name I pray, Amen.",
-    songTitle: "Compassion Shared",
+    songTitle: "Grace Extended",
+    songArtist: "Kojo Bright",
+    songGenre: "Afroswing-Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/compassion-shared-placeholder",
-      appleMusic: "https://music.apple.com/us/album/compassion-shared-placeholder"
+      suno: "https://suno.com/search?q=Grace%20Extended%20Kojo%20Bright",
+      spotify: "https://open.spotify.com/search/Grace%20Extended%20Kojo%20Bright",
+      appleMusic: "https://music.apple.com/us/search?term=Grace%20Extended%20Kojo%20Bright",
+      youtube: "https://www.youtube.com/results?search_query=Grace%20Extended%20Kojo%20Bright%20gospel"
     }
   },
   {
@@ -835,10 +992,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Stephen Covey"
     },
     prayer: "God, thank You for accountability partners. Help me remain open to guidance and correction. In Jesus' name I pray, Amen.",
-    songTitle: "Iron Sharpens Iron",
+    songTitle: "Iron & The Mirror",
+    songArtist: "Judah Rell",
+    songGenre: "Gospel Rap",
     songLinks: {
-      spotify: "https://open.spotify.com/track/iron-sharpens-iron-placeholder",
-      appleMusic: "https://music.apple.com/us/album/iron-sharpens-iron-placeholder"
+      suno: "https://suno.com/search?q=Iron%20%26%20The%20Mirror%20Judah%20Rell",
+      spotify: "https://open.spotify.com/search/Iron%20%26%20The%20Mirror%20Judah%20Rell",
+      appleMusic: "https://music.apple.com/us/search?term=Iron%20%26%20The%20Mirror%20Judah%20Rell",
+      youtube: "https://www.youtube.com/results?search_query=Iron%20%26%20The%20Mirror%20Judah%20Rell%20gospel"
     }
   },
   {
@@ -856,10 +1017,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Leo Buscaglia"
     },
     prayer: "Father, thank You for the gifts You've given me. Help me use them to serve You and others effectively. In Jesus' name I pray, Amen.",
-    songTitle: "Gifts of the Spirit",
+    songTitle: "Vessels of Grace",
+    songArtist: "Zaria Lumen",
+    songGenre: "Gospel House",
     songLinks: {
-      spotify: "https://open.spotify.com/track/gifts-of-the-spirit-placeholder",
-      appleMusic: "https://music.apple.com/us/album/gifts-of-the-spirit-placeholder"
+      suno: "https://suno.com/search?q=Vessels%20of%20Grace%20Zaria%20Lumen",
+      spotify: "https://open.spotify.com/search/Vessels%20of%20Grace%20Zaria%20Lumen",
+      appleMusic: "https://music.apple.com/us/search?term=Vessels%20of%20Grace%20Zaria%20Lumen",
+      youtube: "https://www.youtube.com/results?search_query=Vessels%20of%20Grace%20Zaria%20Lumen%20gospel"
     }
   },
   {
@@ -877,10 +1042,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Mahatma Gandhi"
     },
     prayer: "Lord, thank You for the freedom You've given me. Help me live in this liberty while serving others. In Jesus' name I pray, Amen.",
-    songTitle: "Freedom Reigns",
+    songTitle: "Unbound",
+    songArtist: "Femi Highgate",
+    songGenre: "Afro-Highlife Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/freedom-reigns-placeholder",
-      appleMusic: "https://music.apple.com/us/album/freedom-reigns-placeholder"
+      suno: "https://suno.com/search?q=Unbound%20Femi%20Highgate",
+      spotify: "https://open.spotify.com/search/Unbound%20Femi%20Highgate",
+      appleMusic: "https://music.apple.com/us/search?term=Unbound%20Femi%20Highgate",
+      youtube: "https://www.youtube.com/results?search_query=Unbound%20Femi%20Highgate%20gospel"
     }
   },
   {
@@ -898,10 +1067,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Aristotle"
     },
     prayer: "God, thank You for healthy habits. Help me maintain routines that support my recovery and honor You. In Jesus' name I pray, Amen.",
-    songTitle: "Routines",
+    songTitle: "The Quiet Dawn (Routines of Grace)",
+    songArtist: "Naledi Groove",
+    songGenre: "Amapiano-Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/routines-placeholder",
-      appleMusic: "https://music.apple.com/us/album/routines-placeholder"
+      suno: "https://suno.com/search?q=The%20Quiet%20Dawn%20(Routines%20of%20Grace)%20Naledi%20Groove",
+      spotify: "https://open.spotify.com/search/The%20Quiet%20Dawn%20(Routines%20of%20Grace)%20Naledi%20Groove",
+      appleMusic: "https://music.apple.com/us/search?term=The%20Quiet%20Dawn%20(Routines%20of%20Grace)%20Naledi%20Groove",
+      youtube: "https://www.youtube.com/results?search_query=The%20Quiet%20Dawn%20(Routines%20of%20Grace)%20Naledi%20Groove%20gospel"
     }
   },
   {
@@ -919,10 +1092,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "Lord, thank You for the testimony of Your grace in my life. Help me share it to encourage others. In Jesus' name I pray, Amen.",
-    songTitle: "My Testimony",
+    songTitle: "Word of My Testimony",
+    songArtist: "Kwame Uplift",
+    songGenre: "Afrobeats-Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/my-testimony-placeholder",
-      appleMusic: "https://music.apple.com/us/album/my-testimony-placeholder"
+      suno: "https://suno.com/search?q=Word%20of%20My%20Testimony%20Kwame%20Uplift",
+      spotify: "https://open.spotify.com/search/Word%20of%20My%20Testimony%20Kwame%20Uplift",
+      appleMusic: "https://music.apple.com/us/search?term=Word%20of%20My%20Testimony%20Kwame%20Uplift",
+      youtube: "https://www.youtube.com/results?search_query=Word%20of%20My%20Testimony%20Kwame%20Uplift%20gospel"
     }
   },
   {
@@ -940,10 +1117,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Stephen Covey"
     },
     prayer: "God, thank You for restoring trust in my life. Help me continue to trust You and build trustworthy relationships. In Jesus' name I pray, Amen.",
-    songTitle: "Trust In You",
+    songTitle: "Mended Glass",
+    songArtist: "Simone Reyner",
+    songGenre: "Gospel Soul",
     songLinks: {
-      spotify: "https://open.spotify.com/track/trust-in-you-placeholder",
-      appleMusic: "https://music.apple.com/us/album/trust-in-you-placeholder"
+      suno: "https://suno.com/search?q=Mended%20Glass%20Simone%20Reyner",
+      spotify: "https://open.spotify.com/search/Mended%20Glass%20Simone%20Reyner",
+      appleMusic: "https://music.apple.com/us/search?term=Mended%20Glass%20Simone%20Reyner",
+      youtube: "https://www.youtube.com/results?search_query=Mended%20Glass%20Simone%20Reyner%20gospel"
     }
   },
   {
@@ -961,10 +1142,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "Lord, thank You for stability in my life. Help me maintain this foundation while continuing to grow. In Jesus' name I pray, Amen.",
-    songTitle: "Solid Rock",
+    songTitle: "Still Standing",
+    songArtist: "Femi Highgate",
+    songGenre: "Afro-Highlife Gospel",
     songLinks: {
-      spotify: "https://open.spotify.com/track/solid-rock-placeholder",
-      appleMusic: "https://music.apple.com/us/album/solid-rock-placeholder"
+      suno: "https://suno.com/search?q=Still%20Standing%20Femi%20Highgate",
+      spotify: "https://open.spotify.com/search/Still%20Standing%20Femi%20Highgate",
+      appleMusic: "https://music.apple.com/us/search?term=Still%20Standing%20Femi%20Highgate",
+      youtube: "https://www.youtube.com/results?search_query=Still%20Standing%20Femi%20Highgate%20gospel"
     }
   },
   {
@@ -982,10 +1167,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Tom Peters"
     },
     prayer: "God, thank You for reasons to celebrate. Help me maintain joy and gratitude for Your blessings. In Jesus' name I pray, Amen.",
-    songTitle: "Celebration Praise",
+    songTitle: "This Is The Day (Milestone Praise)",
+    songArtist: "Judah Rell",
+    songGenre: "Gospel Rap",
     songLinks: {
-      spotify: "https://open.spotify.com/track/celebration-praise-placeholder",
-      appleMusic: "https://music.apple.com/us/album/celebration-praise-placeholder"
+      suno: "https://suno.com/search?q=This%20Is%20The%20Day%20(Milestone%20Praise)%20Judah%20Rell",
+      spotify: "https://open.spotify.com/search/This%20Is%20The%20Day%20(Milestone%20Praise)%20Judah%20Rell",
+      appleMusic: "https://music.apple.com/us/search?term=This%20Is%20The%20Day%20(Milestone%20Praise)%20Judah%20Rell",
+      youtube: "https://www.youtube.com/results?search_query=This%20Is%20The%20Day%20(Milestone%20Praise)%20Judah%20Rell%20gospel"
     }
   },
   {
@@ -1003,10 +1192,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Unknown"
     },
     prayer: "Father, thank You for the opportunity to leave a positive legacy. Help me live in a way that honors You. In Jesus' name I pray, Amen.",
-    songTitle: "Legacy of Faith",
+    songTitle: "Seeds for Tomorrow",
+    songArtist: "Zaria Lumen",
+    songGenre: "Gospel House",
     songLinks: {
-      spotify: "https://open.spotify.com/track/legacy-of-faith-placeholder",
-      appleMusic: "https://music.apple.com/us/album/legacy-of-faith-placeholder"
+      suno: "https://suno.com/search?q=Seeds%20for%20Tomorrow%20Zaria%20Lumen",
+      spotify: "https://open.spotify.com/search/Seeds%20for%20Tomorrow%20Zaria%20Lumen",
+      appleMusic: "https://music.apple.com/us/search?term=Seeds%20for%20Tomorrow%20Zaria%20Lumen",
+      youtube: "https://www.youtube.com/results?search_query=Seeds%20for%20Tomorrow%20Zaria%20Lumen%20gospel"
     }
   },
   {
@@ -1024,10 +1217,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Michael J. Fox"
     },
     prayer: "Lord, thank You for the peace of acceptance. Help me know what to accept and what to change. In Jesus' name I pray, Amen.",
-    songTitle: "The Serenity Song",
+    songTitle: "What it Is",
+    songArtist: "Judah Rell",
+    songGenre: "Gospel Rap",
     songLinks: {
-      spotify: "https://open.spotify.com/track/serenity-song-placeholder",
-      appleMusic: "https://music.apple.com/us/album/serenity-song-placeholder"
+      suno: "https://suno.com/search?q=What%20it%20Is%20Judah%20Rell",
+      spotify: "https://open.spotify.com/search/What%20it%20Is%20Judah%20Rell",
+      appleMusic: "https://music.apple.com/us/search?term=What%20it%20Is%20Judah%20Rell",
+      youtube: "https://www.youtube.com/results?search_query=What%20it%20Is%20Judah%20Rell%20gospel"
     }
   },
   {
@@ -1045,10 +1242,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Rabindranath Tagore"
     },
     prayer: "God, thank You for the transformation You've brought to my life. Continue to change me into Your image. In Jesus' name I pray, Amen.",
-    songTitle: "Transformed",
+    songTitle: "Unveiled (Glory to Glory)",
+    songArtist: "Simone Reyner",
+    songGenre: "Gospel Soul",
     songLinks: {
-      spotify: "https://open.spotify.com/track/transformed-placeholder",
-      appleMusic: "https://music.apple.com/us/album/transformed-placeholder"
+      suno: "https://suno.com/search?q=Unveiled%20(Glory%20to%20Glory)%20Simone%20Reyner",
+      spotify: "https://open.spotify.com/search/Unveiled%20(Glory%20to%20Glory)%20Simone%20Reyner",
+      appleMusic: "https://music.apple.com/us/search?term=Unveiled%20(Glory%20to%20Glory)%20Simone%20Reyner",
+      youtube: "https://www.youtube.com/results?search_query=Unveiled%20(Glory%20to%20Glory)%20Simone%20Reyner%20gospel"
     }
   },
   {
@@ -1066,10 +1267,14 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "John Henry Newman"
     },
     prayer: "Lord, thank You for continuous growth. Help me remain committed to lifelong learning and development. In Jesus' name I pray, Amen.",
-    songTitle: "Carry It On",
+    songTitle: "Roots in the Soil",
+    songArtist: "Mose Ardell",
+    songGenre: "Gospel Blues",
     songLinks: {
-      spotify: "https://open.spotify.com/track/carry-it-on-placeholder",
-      appleMusic: "https://music.apple.com/us/album/carry-it-on-placeholder"
+      suno: "https://suno.com/search?q=Roots%20in%20the%20Soil%20Mose%20Ardell",
+      spotify: "https://open.spotify.com/search/Roots%20in%20the%20Soil%20Mose%20Ardell",
+      appleMusic: "https://music.apple.com/us/search?term=Roots%20in%20the%20Soil%20Mose%20Ardell",
+      youtube: "https://www.youtube.com/results?search_query=Roots%20in%20the%20Soil%20Mose%20Ardell%20gospel"
     }
   },
   {
@@ -1087,10 +1292,22 @@ export const allWeeklyThemes: WeeklyTheme[] = [
       author: "Paul Theroux"
     },
     prayer: "God, thank You for the entire journey of recovery. Help me remain grateful for every step of the way. In Jesus' name I pray, Amen.",
-    songTitle: "The Journey",
+    songTitle: "Miles of Grace (The Whole Story)",
+    songArtist: "Zaria Lumen",
+    songGenre: "Gospel House",
     songLinks: {
-      spotify: "https://open.spotify.com/track/the-journey-placeholder",
-      appleMusic: "https://music.apple.com/us/album/the-journey-placeholder"
+      suno: "https://suno.com/search?q=Miles%20of%20Grace%20(The%20Whole%20Story)%20Zaria%20Lumen",
+      spotify: "https://open.spotify.com/search/Miles%20of%20Grace%20(The%20Whole%20Story)%20Zaria%20Lumen",
+      appleMusic: "https://music.apple.com/us/search?term=Miles%20of%20Grace%20(The%20Whole%20Story)%20Zaria%20Lumen",
+      youtube: "https://www.youtube.com/results?search_query=Miles%20of%20Grace%20(The%20Whole%20Story)%20Zaria%20Lumen%20gospel"
     }
   }
 ];
+
+allWeeklyThemes.forEach((t) => {
+  if (weeklyImagePrompts[t.week]) {
+    t.imagePrompt = weeklyImagePrompts[t.week];
+  }
+});
+
+export { weeklyImagePrompts };

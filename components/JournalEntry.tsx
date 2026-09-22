@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import type { WeeklyTheme, JournalResponses, UndoAction, SavedEntries } from '../types';
 import { PrintPreviewModal } from './PrintPreviewModal';
+import { exportCurrentWeekToPDFWithCanvas } from '../utils/pdfExport';
 import { generatePersonalPrayer, generateDeeperReflectionPrompt, generateGoalSuggestions } from '../services/geminiService';
 import { TextToSpeechButton } from './TextToSpeechButton';
 import { ImageSkeleton } from './ImageSkeleton';
@@ -9,6 +10,7 @@ import { AudioRecorderButton } from './AudioRecorderButton';
 import { QRCodeModal } from './QRCodeModal';
 import { GuidedMeditation } from './GuidedMeditation';
 import { decode } from '../utils/audioUtils';
+import { WeeklySongCard } from './WeeklySongCard';
 
 interface JournalEntryProps {
   entry: WeeklyTheme | null;
@@ -184,9 +186,16 @@ const MicrophoneIcon = () => (
     </svg>
 );
 
+const DocumentPdfIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+    </svg>
+);
 
-export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, onResponseChange, onShowToast, isFocusMode, onToggleFocusMode, imageUrl, onGenerateImage, isGeneratingImage, podcast, isGeneratingPodcast, onGeneratePodcast, lastChange, onUndo, allThemes, allResponses, allImages }) => {
+
+export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, onResponseChange, onShowToast, isFocusMode, onToggleFocusMode, imageUrl, onGenerateImage, isGeneratingImage, lyrics, isGeneratingLyrics, onGenerateLyrics, podcast, isGeneratingPodcast, onGeneratePodcast, lastChange, onUndo, allThemes, allResponses, allImages }) => {
   const [isPrintModalOpen, setPrintModalOpen] = useState(false);
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [personalizedPrayer, setPersonalizedPrayer] = useState<string | null>(null);
   const [isGeneratingPrayer, setIsGeneratingPrayer] = useState(false);
   const [prayerError, setPrayerError] = useState<string | null>(null);
@@ -218,7 +227,20 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
     let url: string | null = null;
     if (podcast) {
         try {
+            if (podcast.startsWith('data:') || podcast.startsWith('blob:')) {
+                setPodcastAudioUrl(podcast);
+                return;
+            }
             const pcmData = decode(podcast);
+            // Check if already a valid RIFF/WAV file
+            if (pcmData.length >= 12 &&
+                String.fromCharCode(pcmData[0], pcmData[1], pcmData[2], pcmData[3]) === 'RIFF') {
+                const wavBlob = new Blob([pcmData], { type: 'audio/wav' });
+                url = URL.createObjectURL(wavBlob);
+                setPodcastAudioUrl(url);
+                return;
+            }
+
             const sampleRate = 24000;
             const numChannels = 1;
             const bitsPerSample = 16;
@@ -340,7 +362,8 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
   };
 
   const triggerImageGeneration = () => {
-    onGenerateImage(entry.week, `Week ${entry.week} Theme: ${entry.theme}. Concept: ${entry.explanation}`);
+    const promptToUse = entry.imagePrompt || `Week ${entry.week} Theme: ${entry.theme}. Concept: ${entry.explanation}`;
+    onGenerateImage(entry.week, promptToUse);
   };
 
   const handleDownloadImage = () => {
@@ -353,14 +376,37 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
     document.body.removeChild(link);
   };
 
+  const handleExportWeekPDF = async () => {
+    if (!entry) return;
+    setIsExportingPDF(true);
+    try {
+      const result = await exportCurrentWeekToPDFWithCanvas({
+        entry,
+        responses,
+        imageUrl,
+      });
+
+      if (result.success) {
+        onShowToast(`Week ${entry.week} journal responses exported to PDF (${result.fileName})!`, 'success');
+      } else {
+        onShowToast(result.error || 'Failed to export current week PDF.', 'error');
+      }
+    } catch (err) {
+      console.error('Failed to export current week PDF:', err);
+      onShowToast('An error occurred while generating the PDF document.', 'error');
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
+
 
   return (
     <>
       <div className="space-y-6 animate-fade-in">
-        <div className="flex justify-end space-x-2">
+        <div className="flex justify-end items-center space-x-2 flex-wrap gap-y-2">
            <button
             onClick={onToggleFocusMode}
-            className="no-print flex items-center bg-card text-muted px-3 py-2 rounded-lg shadow-md hover:bg-card-secondary hover:text-main focus:outline-none focus:ring-2 focus:ring-offset-2 ring-primary transition-colors"
+            className="no-print flex items-center bg-card text-muted px-3 py-2 rounded-lg shadow-md hover:bg-card-secondary hover:text-main focus:outline-none focus:ring-2 focus:ring-offset-2 ring-primary transition-colors text-sm font-medium"
             aria-label={isFocusMode ? "Exit focus mode" : "Enter focus mode"}
             title={isFocusMode ? "Exit focus mode" : "Enter focus mode"}
           >
@@ -369,11 +415,33 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
           </button>
           <button
             onClick={() => setPrintModalOpen(true)}
-            className="no-print flex items-center bg-primary-dark text-on-primary px-3 py-2 rounded-lg shadow-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 ring-primary transition-colors"
+            className="no-print flex items-center bg-card text-muted px-3 py-2 rounded-lg shadow-md hover:bg-card-secondary hover:text-main focus:outline-none focus:ring-2 focus:ring-offset-2 ring-primary transition-colors text-sm font-medium"
             aria-label="Open print preview for this journal entry"
           >
             <PrinterIcon />
             Print Preview
+          </button>
+          <button
+            onClick={handleExportWeekPDF}
+            disabled={isExportingPDF}
+            className="no-print flex items-center bg-[#1C2A39] text-[#D4AF37] px-3.5 py-2 rounded-lg shadow-md hover:bg-[#16222e] focus:outline-none focus:ring-2 focus:ring-offset-2 ring-[#D4AF37] transition-all disabled:opacity-50 text-sm font-semibold border border-[#D4AF37]/40"
+            aria-label={`Export Week ${entry.week} journal responses to PDF`}
+            title={`Export Week ${entry.week} journal responses and reflections into a formatted PDF file`}
+          >
+            {isExportingPDF ? (
+              <>
+                <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-[#D4AF37]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Exporting PDF...</span>
+              </>
+            ) : (
+              <>
+                <DocumentPdfIcon />
+                <span>Export Week PDF</span>
+              </>
+            )}
           </button>
         </div>
 
@@ -424,6 +492,34 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                     </div>
                 )}
             </div>
+
+            {entry.imagePrompt && (
+              <div className="mt-4 p-3.5 bg-card-secondary/70 border border-default rounded-lg text-left">
+                <div className="flex items-center justify-between gap-2 mb-1.5">
+                  <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
+                    <span className="w-3.5 h-3.5 inline-flex items-center justify-center">🎨</span>
+                    <span>Week {entry.week} Artwork Generation Prompt</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      navigator.clipboard.writeText(entry.imagePrompt || '');
+                      onShowToast('Artwork generation prompt copied to clipboard!', 'success');
+                    }}
+                    className="text-[11px] px-2.5 py-1 rounded bg-card hover:bg-card-secondary text-muted hover:text-main border border-default transition-colors flex items-center gap-1.5 cursor-pointer"
+                    title="Copy prompt to clipboard"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                    </svg>
+                    Copy Prompt
+                  </button>
+                </div>
+                <p className="text-xs text-muted leading-relaxed italic">
+                  "{entry.imagePrompt}"
+                </p>
+              </div>
+            )}
         </header>
         
         <InfoCard title="Weekly Podcast" icon={<MicrophoneIcon />}>
@@ -773,8 +869,55 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                 )}
             </div>
         </InfoCard>
+
+        {/* Quick Week PDF Export Card */}
+        <div className="bg-card p-5 rounded-xl border border-[#D4AF37]/30 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
+          <div className="flex items-center space-x-3 text-center sm:text-left">
+            <div className="p-2.5 bg-[#1C2A39] text-[#D4AF37] rounded-lg">
+              <DocumentPdfIcon />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-main">
+                Export Week {entry.week} Journal to PDF
+              </h4>
+              <p className="text-xs text-muted">
+                Download a clean, printable document containing your reflection answers, scripture anchor, and prayer.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleExportWeekPDF}
+            disabled={isExportingPDF}
+            className="w-full sm:w-auto px-4 py-2 bg-[#1C2A39] text-[#D4AF37] hover:bg-[#16222e] rounded-lg font-semibold text-xs sm:text-sm shadow transition-all flex items-center justify-center space-x-2 border border-[#D4AF37]/40 disabled:opacity-50"
+          >
+            {isExportingPDF ? (
+              <>
+                <svg className="animate-spin h-4 w-4 text-[#D4AF37]" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Generating PDF...</span>
+              </>
+            ) : (
+              <>
+                <DocumentPdfIcon />
+                <span>Export Week {entry.week} PDF</span>
+              </>
+            )}
+          </button>
+        </div>
         
         <GuidedMeditation entry={entry} onShowToast={onShowToast} />
+
+        {entry.songTitle && (
+          <WeeklySongCard
+            entry={entry}
+            lyrics={lyrics || undefined}
+            isGeneratingLyrics={isGeneratingLyrics}
+            onGenerateLyrics={onGenerateLyrics}
+            onShowToast={onShowToast}
+          />
+        )}
       </div>
       
       {entry && (

@@ -16,10 +16,16 @@ export interface WeeklyTheme {
   };
   prayer: string;
   songTitle: string;
+  songArtist?: string;
+  songGenre?: string;
   songLinks: {
     spotify: string;
     appleMusic: string;
+    suno?: string;
+    youtube?: string;
+    amazonMusic?: string;
   };
+  imagePrompt?: string;
 }
 
 export interface JournalResponses {
@@ -70,4 +76,17 @@ export interface EmotionDataPoint {
 export interface MomentOfGrace {
   week: number;
   moment: string;
+}
+
+export type SponsorNoteCategory = 'progress' | 'question' | 'step_work' | 'vulnerability' | 'gratitude';
+
+export interface SponsorCheckIn {
+  id: string;
+  category: SponsorNoteCategory;
+  note: string;
+  mood?: string;
+  week?: number;
+  sponsorName?: string;
+  createdAt: string;
+  isDiscussed?: boolean;
 }

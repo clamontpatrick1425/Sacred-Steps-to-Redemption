@@ -115,10 +115,21 @@ export async function saveJournalDocToCloud(
   const docRef = doc(db, 'journalEntries', docId);
 
   try {
+    // Sanitize responses to only known primitive string fields to ensure clean serialization
+    const sanitizedResponses: Partial<JournalResponses> = {};
+    if (responses) {
+      if (typeof responses.promptResponse === 'string') sanitizedResponses.promptResponse = responses.promptResponse;
+      if (typeof responses.reflection1Response === 'string') sanitizedResponses.reflection1Response = responses.reflection1Response;
+      if (typeof responses.reflection2Response === 'string') sanitizedResponses.reflection2Response = responses.reflection2Response;
+      if (typeof responses.deeperReflectionResponse === 'string') sanitizedResponses.deeperReflectionResponse = responses.deeperReflectionResponse;
+      if (typeof responses.personalGoal === 'string') sanitizedResponses.personalGoal = responses.personalGoal;
+      if (typeof responses.goalReflection === 'string') sanitizedResponses.goalReflection = responses.goalReflection;
+    }
+
     await setDoc(docRef, {
       userId: uid,
       week,
-      content: JSON.stringify(responses),
+      content: JSON.stringify(sanitizedResponses),
       createdAt: new Date().toISOString()
     });
   } catch (err) {

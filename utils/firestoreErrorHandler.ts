@@ -29,24 +29,34 @@ export interface FirestoreErrorInfo {
 }
 
 export function handleFirestoreError(error: unknown, operationType: OperationType, path: string | null) {
-  const errInfo: FirestoreErrorInfo = {
-    error: error instanceof Error ? error.message : String(error),
-    authInfo: {
-      userId: auth.currentUser?.uid,
-      email: auth.currentUser?.email,
-      emailVerified: auth.currentUser?.emailVerified,
-      isAnonymous: auth.currentUser?.isAnonymous,
-      tenantId: auth.currentUser?.tenantId,
-      providerInfo: auth.currentUser?.providerData.map(provider => ({
-        providerId: provider.providerId,
-        displayName: provider.displayName,
-        email: provider.email,
-        photoUrl: provider.photoURL
-      })) || []
-    },
-    operationType,
-    path
-  };
-  console.error('Firestore Error: ', JSON.stringify(errInfo));
-  throw new Error(JSON.stringify(errInfo));
+  let errString = '';
+  try {
+    const errInfo: FirestoreErrorInfo = {
+      error: error instanceof Error ? error.message : String(error),
+      authInfo: {
+        userId: auth.currentUser?.uid,
+        email: auth.currentUser?.email,
+        emailVerified: auth.currentUser?.emailVerified,
+        isAnonymous: auth.currentUser?.isAnonymous,
+        tenantId: auth.currentUser?.tenantId,
+        providerInfo: auth.currentUser?.providerData.map(provider => ({
+          providerId: String(provider.providerId || ''),
+          displayName: provider.displayName ? String(provider.displayName) : null,
+          email: provider.email ? String(provider.email) : null,
+          photoUrl: provider.photoURL ? String(provider.photoURL) : null
+        })) || []
+      },
+      operationType,
+      path: path ? String(path) : null
+    };
+    errString = JSON.stringify(errInfo);
+  } catch {
+    errString = JSON.stringify({
+      error: error instanceof Error ? error.message : String(error),
+      operationType,
+      path: path ? String(path) : null
+    });
+  }
+  console.error('Firestore Error: ', errString);
+  throw new Error(errString);
 }

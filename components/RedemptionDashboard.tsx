@@ -3,6 +3,8 @@ import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
 import { db, auth } from '../firebase';
 import { generateRedemptionReport } from '../services/geminiService';
 import type { SavedEntries, WeeklyTheme } from '../types';
+import { SponsorCheckInCard } from './SponsorCheckInCard';
+import { exportCompletedJournalToPDF } from '../utils/pdfExport';
 
 interface RedemptionDashboardProps {
   user: { name: string; email: string; uid?: string } | null;
@@ -12,6 +14,9 @@ interface RedemptionDashboardProps {
   completedMilestones: number[];
   gratitudeCount: number;
   totalWeeks: number;
+  allThemes?: WeeklyTheme[];
+  currentWeek?: number;
+  onShowToast?: (message: string, type: 'error' | 'info' | 'success') => void;
   onClose: () => void;
 }
 
@@ -31,6 +36,9 @@ export const RedemptionDashboard: React.FC<RedemptionDashboardProps> = ({
   completedMilestones,
   gratitudeCount,
   totalWeeks,
+  allThemes,
+  currentWeek,
+  onShowToast,
   onClose
 }) => {
   const [triggers, setTriggers] = useState<TriggerRecord[]>([]);
@@ -40,6 +48,41 @@ export const RedemptionDashboard: React.FC<RedemptionDashboardProps> = ({
   const [reportText, setReportText] = useState<string | null>(null);
   const [isCompilingReport, setIsCompilingReport] = useState(false);
   const [reportError, setReportError] = useState<string | null>(null);
+
+  // PDF Export state
+  const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [pdfNotification, setPdfNotification] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  const handleExportPDF = () => {
+    setIsExportingPDF(true);
+    setPdfNotification(null);
+    try {
+      const result = exportCompletedJournalToPDF({
+        user,
+        savedEntries,
+        themes: allThemes || [],
+        reflectionStreak,
+        completedWeeksCount,
+      });
+
+      if (!result.success) {
+        const msg = "No completed weekly journal entries found to export yet. Write responses in any week to export your journal!";
+        setPdfNotification({ text: msg, type: 'info' });
+        if (onShowToast) onShowToast(msg, 'info');
+      } else {
+        const msg = `Successfully exported ${result.exportedCount} completed weeks to ${result.fileName}! Check your downloads.`;
+        setPdfNotification({ text: msg, type: 'success' });
+        if (onShowToast) onShowToast(msg, 'success');
+      }
+    } catch (err) {
+      console.error("PDF Export error:", err);
+      const msg = "Failed to export PDF document. Please try again.";
+      setPdfNotification({ text: msg, type: 'error' });
+      if (onShowToast) onShowToast(msg, 'error');
+    } finally {
+      setIsExportingPDF(false);
+    }
+  };
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -105,18 +148,34 @@ export const RedemptionDashboard: React.FC<RedemptionDashboardProps> = ({
               Account Integration Live
             </span>
             <h2 className="text-3xl font-extrabold tracking-tight mt-1">
-              Your Redemption & Progress Compilation
+              Your Redemption &amp; Progress Compilation
             </h2>
             <p className="text-sm opacity-90 font-medium mt-1">
               Analyzing the steps of {user?.name || 'Pilgrim'} • Sync State: Active
             </p>
           </div>
-          <button 
-            onClick={onClose}
-            className="self-center bg-white/10 hover:bg-white/20 active:bg-white/30 text-white font-medium py-2 px-5 rounded-full border border-white/20 transition-all text-sm cursor-pointer"
-          >
-            Back to Journal
-          </button>
+          <div className="flex items-center gap-2.5 flex-wrap self-start sm:self-center">
+            <button
+              type="button"
+              onClick={handleExportPDF}
+              disabled={isExportingPDF}
+              className="bg-white text-slate-900 hover:bg-slate-100 active:bg-slate-200 font-bold py-2 px-4 rounded-full border border-white/40 transition-all text-xs flex items-center gap-1.5 shadow-sm cursor-pointer disabled:opacity-50"
+              title="Export completed reflections into a clean, printable PDF document"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span>{isExportingPDF ? 'Generating PDF...' : 'Export Journal (PDF)'}</span>
+            </button>
+            <button 
+              onClick={onClose}
+              className="bg-white/10 hover:bg-white/20 active:bg-white/30 text-white font-medium py-2 px-5 rounded-full border border-white/20 transition-all text-sm cursor-pointer"
+            >
+              Back to Journal
+            </button>
+          </div>
         </div>
       </div>
 
@@ -148,6 +207,40 @@ export const RedemptionDashboard: React.FC<RedemptionDashboardProps> = ({
 
       {/* Main Compilation Dashboard Content */}
       <div className="p-6 md:p-8 space-y-8">
+        {pdfNotification && (
+          <div className={`p-4 rounded-xl text-xs font-semibold flex items-center justify-between border animate-fadeIn ${
+            pdfNotification.type === 'success'
+              ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-300 text-emerald-800 dark:text-emerald-300'
+              : pdfNotification.type === 'error'
+              ? 'bg-red-50 dark:bg-red-950/40 border-red-300 text-red-800 dark:text-red-300'
+              : 'bg-primary/10 border-primary/30 text-primary'
+          }`}>
+            <div className="flex items-center gap-2">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10" />
+                <line x1="12" y1="16" x2="12" y2="12" />
+                <line x1="12" y1="8" x2="12.01" y2="8" />
+              </svg>
+              <span>{pdfNotification.text}</span>
+            </div>
+            <button 
+              type="button"
+              onClick={() => setPdfNotification(null)} 
+              className="opacity-70 hover:opacity-100 cursor-pointer p-1"
+              aria-label="Dismiss notification"
+            >
+              ✕
+            </button>
+          </div>
+        )}
+
+        {/* Sponsor Check-In Section */}
+        <SponsorCheckInCard 
+          currentWeek={currentWeek} 
+          userName={user?.name} 
+          onShowToast={onShowToast} 
+        />
+
         <div className="grid md:grid-cols-12 gap-8">
           
           {/* Left Column: Data Gathered (Journals & Triggers) */}
@@ -155,11 +248,30 @@ export const RedemptionDashboard: React.FC<RedemptionDashboardProps> = ({
             
             {/* Journal Completion Details */}
             <div className="bg-card-secondary p-6 rounded-xl border border-default">
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="font-bold text-lg text-main">Journaling Log Entries</h3>
-                <span className="text-xs bg-primary/10 text-primary-hover px-2.5 py-1 rounded-full font-bold">
-                  {completedPercentage}% Completed
-                </span>
+              <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                <div>
+                  <h3 className="font-bold text-lg text-main">Journaling Log Entries</h3>
+                  <p className="text-xs text-muted">Archived weekly reflections &amp; answers</p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={handleExportPDF}
+                    disabled={isExportingPDF}
+                    className="text-xs bg-primary hover:bg-primary-hover text-on-primary font-semibold px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-all shadow-2xs cursor-pointer disabled:opacity-50"
+                    title="Export completed journal entries into a clean printable PDF"
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                      <polyline points="7 10 12 15 17 10" />
+                      <line x1="12" y1="15" x2="12" y2="3" />
+                    </svg>
+                    <span>Printable PDF</span>
+                  </button>
+                  <span className="text-xs bg-primary/10 text-primary-hover px-2.5 py-1 rounded-full font-bold">
+                    {completedPercentage}% Completed
+                  </span>
+                </div>
               </div>
               
               {completedWeeksCount === 0 ? (

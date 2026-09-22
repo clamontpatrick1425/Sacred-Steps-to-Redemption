@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { generateJournalContent, generateReflectiveImage, generateSongLyrics, generatePodcastScript, generateSpeech, getFallbackRecoveryImage } from './services/geminiService';
+import { generateJournalContent, generateReflectiveImage, generateSongLyrics, generatePodcastScript, generateSpeech, getFallbackRecoveryImage, getFallbackDevotionalLyrics } from './services/geminiService';
 import type { WeeklyTheme, SavedEntries, JournalResponses, UndoAction, GratitudeEntry, ToastMessage, AppTheme, AppFontSize, SavedLyrics, SavedPodcasts } from './types';
 import { Header } from './components/Header';
 import { JournalEntry } from './components/JournalEntry';
@@ -29,9 +29,12 @@ import { MoodTracker } from './components/MoodTracker';
 import { MeditationTimer } from './components/MeditationTimer';
 import { RedemptionDashboard } from './components/RedemptionDashboard';
 import { RecoverySEOFAQSection } from './components/RecoverySEOFAQSection';
+import { LegalModal, type LegalTab } from './components/LegalModal';
 import { auth, onAuthStateChanged, signOut } from './firebase';
 import { syncJournalEntries, syncUserProfile, saveJournalDocToCloud } from './utils/syncHelper';
 import { getAllPodcasts, savePodcast } from './utils/podcastDb';
+
+import { BrandLogo } from './components/BrandLogo';
 
 const MILESTONES = [4, 13, 26, 52];
 
@@ -66,6 +69,149 @@ const XIcon = () => (
   </svg>
 );
 
+
+const WEEK_1_ORIGINAL_LYRICS = `[Intro]
+Been a long night, longer than I care to count.
+But this morning, for the first time in years,
+I woke up and didn't reach for the dark.
+I just opened the window, and the light came in anyway.
+
+[Verse 1]
+Coffee's warm and the kitchen's quiet,
+First real morning I remember in a while.
+Hands are steady, mind is clear,
+Something's breathing in me that used to hide.
+
+[Pre-Chorus]
+I don't need a mountain moved,
+Just enough grace to walk through the door.
+One foot, then the other...
+
+[Chorus]
+Old things gone!
+The new is here!
+Morning light is drying every tear!
+Every sunrise is an invitation, friend,
+To begin, begin again!
+So I'm taking the first step...
+Taking the first step home.
+
+[Verse 2]
+I carried shame like a coat of iron.
+(Child, I watched you walk through fire.)
+Thought I'd have to earn the morning.
+(Just open your hands and let it in.)
+
+[Pre-Chorus]
+I don't need a mountain moved,
+Just enough grace to walk through the door.
+One foot, then the other...
+
+[Chorus]
+Old things gone!
+The new is here!
+Morning light is drying every tear!
+Every sunrise is an invitation, friend,
+To begin, begin again!
+So I'm taking the first step...
+Taking the first step home.
+
+[Bridge]
+I thought I'd ruined the story.
+He was just turning the page.
+What was broken is becoming
+Something mercy can erase, oh!
+
+[Chorus]
+Old things gone!
+The new is here!
+Morning light is drying every tear!
+Every sunrise is an invitation, friend,
+To begin, begin again!
+So I'm taking the first step...
+Taking the first step home.
+
+[Outro]
+I made it in...
+And I'm taking the first step...
+Taking the first step home.
+The old is gone...
+The new is here...
+Home.`;
+
+const WEEK_2_ORIGINAL_LYRICS = `[Intro | Spoken Word]
+Yeah.
+We spend so much time building walls...
+Pretending the foundation isn't sinking.
+But You don't want the fortress.
+You want the ruins.
+
+[Verse 1 | Gospel Rap]
+I been holding up the sky with a fractured spine,
+Smiling for the crowd while I’m losing my mind.
+Told 'em I’m okay, told 'em I’m healed,
+But they don't see the sh-sh-shattered pieces I conceal.
+I’m terrified to drop the shield, terrified to break,
+If they see the real me, will they stay or walk away?
+I’m running on empty, running on fumes,
+Trying to be the savior in a room full of tombs.
+
+[Pre-Chorus]
+My hands are shaking, the armor is heavy,
+I’m tired of fighting, I’m tired and unsteady.
+I drop to my knees, I got nothing to prove,
+Lord, I need Your power 'cause I got nothing to lose!
+
+[Chorus]
+You said My grace is enough for you,
+My power is perfect when you’re broken in two!
+When you are weak, that’s when I am strong,
+Stop hiding the cracks, let Me carry the song.
+Yeah, the grace is enough,
+When the armor falls off, Your love is enough!
+
+[Verse 2]
+Second Corinthians twelve, the truth in the text:
+I was chained to my pride, I was totally vexed.
+Thought I had to be flawless to stand in Your light,
+But You meet me in the shadows, You meet me in the fight!
+I drop the heavy expectations, let the ego die,
+You don't need my perfection, You just need my cry.
+So I’m trading my weakness for the strength of the King,
+Let the broken hallelujahs start to ring!
+
+[Pre-Chorus]
+My hands are shaking, the armor is heavy,
+I’m tired of fighting, I’m tired and unsteady.
+I drop to my knees, I got nothing to prove,
+Lord, I need Your power 'cause I got nothing to lose!
+
+[Chorus]
+You said My grace is enough for you,
+My power is perfect when you’re broken in two!
+When you are weak, that’s when I am strong,
+Stop hiding the cracks, let Me carry the song.
+Yeah, the grace is enough,
+When the armor falls off, Your love is enough!
+
+[Bridge]
+When I am empty... (You are the overflow)
+When I am failing... (You are the grace I know)
+I can't do this alone... (You are the strength I hold!)
+
+[Final Chorus]
+You said My grace is enough for you! (Grace is enough!)
+My power is perfect when you’re broken in two!
+When you are weak, that’s when I am strong! (So strong!)
+Stop hiding the cracks, let Me carry the song!
+Yeah, the grace is enough!
+When the armor falls off, Your love is enough!
+
+[Outro]
+Your love is enough...
+In the weakness...
+You are strong.
+Yeah.`;
 
 const App: React.FC = () => {
   const [themes, setThemes] = useState<WeeklyTheme[]>([]);
@@ -105,6 +251,13 @@ const App: React.FC = () => {
   const [isSettingPin, setIsSettingPin] = useState(false);
   const [isSOSOpen, setIsSOSOpen] = useState(false);
   const [isTriggerTrackerOpen, setIsTriggerTrackerOpen] = useState(false);
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [legalModalTab, setLegalModalTab] = useState<LegalTab>('privacy');
+
+  const handleOpenLegalModal = (tab: LegalTab) => {
+    setLegalModalTab(tab);
+    setIsLegalModalOpen(true);
+  };
 
   // AI Feature States
   const [generatingImageForWeek, setGeneratingImageForWeek] = useState<number | null>(null);
@@ -170,13 +323,19 @@ const App: React.FC = () => {
       if (storedLyrics) {
         const parsed = JSON.parse(storedLyrics);
         if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+          if (!parsed[1]) {
+            parsed[1] = WEEK_1_ORIGINAL_LYRICS;
+          }
+          if (!parsed[2]) {
+            parsed[2] = WEEK_2_ORIGINAL_LYRICS;
+          }
           return parsed;
         }
       }
-      return {};
+      return { 1: WEEK_1_ORIGINAL_LYRICS, 2: WEEK_2_ORIGINAL_LYRICS };
     } catch (e) {
       console.error("Failed to parse saved lyrics from localStorage", e);
-      return {};
+      return { 1: WEEK_1_ORIGINAL_LYRICS, 2: WEEK_2_ORIGINAL_LYRICS };
     }
   });
 
@@ -357,7 +516,10 @@ const App: React.FC = () => {
     setIsLoading(true);
     setError(null);
     try {
-      const cachedThemes = localStorage.getItem('journalThemes_v3');
+      // Check v5 cache with updated Suno devotional soundscape links
+      localStorage.removeItem('journalThemes_v3');
+      localStorage.removeItem('journalThemes_v4');
+      const cachedThemes = localStorage.getItem('journalThemes_v5');
       if (cachedThemes) {
         setThemes(JSON.parse(cachedThemes));
         setIsLoading(false);
@@ -366,7 +528,7 @@ const App: React.FC = () => {
 
       const content = await generateJournalContent();
       setThemes(content);
-      localStorage.setItem('journalThemes_v3', JSON.stringify(content));
+      localStorage.setItem('journalThemes_v5', JSON.stringify(content));
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -520,15 +682,15 @@ const App: React.FC = () => {
     try {
         const imageUrl = await generateReflectiveImage(promptText, week);
         setGeneratedImages(prev => ({ ...prev, [week]: imageUrl }));
-    } catch(err) {
-        const message = err instanceof Error ? err.message : "An unknown error occurred.";
-        if (message.includes("403") || message.includes("permission") || message.includes("API_KEY") || message.includes("unauthorized") || message.includes("Failed to generate")) {
-            const fallbackUrl = getFallbackRecoveryImage(week);
-            setGeneratedImages(prev => ({ ...prev, [week]: fallbackUrl }));
-            showToast("Custom AI generation requires a billing-enabled key in Settings > Secrets. Loaded a beautiful curated recovery landscape for you instead!", "info");
+        if (imageUrl && imageUrl.startsWith("data:image")) {
+          showToast("AI Reflective artwork generated successfully!", "success");
         } else {
-            showToast(message, 'error');
+          showToast(`Reflective recovery landscape loaded for Week ${week}!`, "info");
         }
+    } catch(err) {
+        const fallbackUrl = getFallbackRecoveryImage(week);
+        setGeneratedImages(prev => ({ ...prev, [week]: fallbackUrl }));
+        showToast(`Reflective recovery landscape loaded for Week ${week}!`, "info");
     } finally {
         setGeneratingImageForWeek(null);
     }
@@ -545,8 +707,9 @@ const App: React.FC = () => {
         setSavedLyrics(prev => ({ ...prev, [week]: result }));
         showToast("Lyrics generated successfully!", "success");
     } catch (err) {
-        const message = err instanceof Error ? err.message : "An unknown error occurred.";
-        showToast(message, 'error');
+        const fallbackLyrics = getFallbackDevotionalLyrics(theme.songTitle, theme);
+        setSavedLyrics(prev => ({ ...prev, [week]: fallbackLyrics }));
+        showToast(`Devotional lyrics loaded for "${theme.songTitle}"!`, "info");
     } finally {
         setIsGeneratingLyricsForWeek(null);
     }
@@ -682,33 +845,43 @@ const App: React.FC = () => {
           {!isFocusMode && (
             <aside className="lg:col-span-3 transition-all duration-300 ease-in-out">
                <div className="sticky top-8 space-y-4">
-                  {user && (
-                    <div className="p-4 bg-card rounded-lg border border-default shadow-sm space-y-2.5">
-                      <div className="flex items-center justify-between">
-                        <span className="text-xs font-bold text-muted uppercase tracking-wider">Account Database</span>
+                  <div className="p-4 bg-card rounded-lg border border-default shadow-sm space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-muted uppercase tracking-wider">
+                        {user ? 'Account Database' : 'Recovery Dashboard'}
+                      </span>
+                      {user ? (
                         <span className="flex h-2 w-2 relative">
                           <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${isSyncing ? 'bg-amber-400' : 'bg-emerald-400'}`}></span>
                           <span className={`relative inline-flex rounded-full h-2 w-2 ${isSyncing ? 'bg-amber-500' : 'bg-emerald-500'}`}></span>
                         </span>
-                      </div>
-                      <p className="text-xs text-muted leading-tight">
-                        Signed in as <strong className="text-main">{user.name}</strong> • Live synchronization is active.
-                      </p>
-                      <button
-                        onClick={() => setIsDashboardOpen(prev => !prev)}
-                        className={`w-full flex items-center justify-center space-x-1.5 py-2 px-3 rounded-md font-bold transition-all text-xs border cursor-pointer ${
-                          isDashboardOpen 
-                            ? 'bg-primary text-on-primary border-primary hover:bg-primary-hover shadow-sm' 
-                            : 'bg-card-secondary border-default text-main hover:bg-primary-light hover:border-primary/20'
-                        }`}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                        </svg>
-                        <span>{isDashboardOpen ? 'Go Back to Weekly Journal' : 'View Compiled Insights'}</span>
-                      </button>
+                      ) : (
+                        <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded font-bold">
+                          Local Active
+                        </span>
+                      )}
                     </div>
-                  )}
+                    <p className="text-xs text-muted leading-tight">
+                      {user ? (
+                        <>Signed in as <strong className="text-main">{user.name}</strong> • Live synchronization active.</>
+                      ) : (
+                        <>Sponsor check-in notes, progress metrics &amp; PDF journal export.</>
+                      )}
+                    </p>
+                    <button
+                      onClick={() => setIsDashboardOpen(prev => !prev)}
+                      className={`w-full flex items-center justify-center space-x-1.5 py-2 px-3 rounded-md font-bold transition-all text-xs border cursor-pointer ${
+                        isDashboardOpen 
+                          ? 'bg-primary text-on-primary border-primary hover:bg-primary-hover shadow-sm' 
+                          : 'bg-card-secondary border-default text-main hover:bg-primary-light hover:border-primary/20'
+                      }`}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                      </svg>
+                      <span>{isDashboardOpen ? 'Go Back to Weekly Journal' : 'Sponsor Check-In & Dashboard'}</span>
+                    </button>
+                  </div>
                   <ProgressTracker 
                     completedWeeks={completedWeeksCount}
                     totalWeeks={themes.length || 52}
@@ -746,7 +919,7 @@ const App: React.FC = () => {
             </aside>
           )}
           <main className={`transition-all duration-300 ease-in-out ${isFocusMode ? 'lg:col-span-12' : 'lg:col-span-9'}`}>
-             {isDashboardOpen && user ? (
+             {isDashboardOpen ? (
                <RedemptionDashboard 
                  user={user}
                  savedEntries={savedEntries}
@@ -755,6 +928,9 @@ const App: React.FC = () => {
                  completedMilestones={completedMilestones}
                  gratitudeCount={gratitudeEntries.length}
                  totalWeeks={themes.length || 52}
+                 allThemes={themes}
+                 currentWeek={currentWeek}
+                 onShowToast={showToast}
                  onClose={() => setIsDashboardOpen(false)}
                />
              ) : (
@@ -820,25 +996,83 @@ const App: React.FC = () => {
       />
       <div className="container mx-auto p-4 md:p-8">
         {renderContent()}
-        <RecoverySEOFAQSection />
+        <RecoverySEOFAQSection onSelectWeek={(week) => {
+          setCurrentWeek(week);
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        }} />
       </div>
-       <footer className="text-center py-6 mt-8 border-t border-default">
-        <p className="text-sm text-muted">
-          Created with hope and faith for your recovery journey.
-        </p>
-        <div className="flex justify-center space-x-8 mt-4">
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Follow us on Facebook" className="hover:opacity-80 transition-opacity">
-                <FacebookIcon />
+       <footer className="py-12 mt-12 border-t border-default bg-card/60">
+        <div className="max-w-5xl mx-auto px-4 text-center space-y-6">
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <BrandLogo size={42} />
+            <div className="text-left sm:text-left text-center">
+              <h3 className="font-cinzel text-xl font-bold tracking-wider text-main">
+                Sacred Steps to Redemption: The Year of Grace
+              </h3>
+              <p className="text-xs text-muted font-sans">
+                A 52-Week Recovery Journal of Reflection, Gratitude &amp; Prayer
+              </p>
+            </div>
+          </div>
+
+          <p className="font-serif-quote italic text-base text-primary font-medium max-w-xl mx-auto">
+            &ldquo;A Path to Recovery, A Life in Grace.&rdquo; &bull; &ldquo;Sustained Walking, Daily Freedom.&rdquo;
+          </p>
+
+          <div className="flex flex-wrap justify-center items-center gap-6 pt-2">
+            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="Sacred Audio on YouTube" className="flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary transition-colors">
+              <YouTubeIcon />
+              <span>Sacred Audio Channel</span>
             </a>
-            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer" aria-label="Subscribe on YouTube" className="hover:opacity-80 transition-opacity">
-                <YouTubeIcon />
+            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Community on Facebook" className="flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary transition-colors">
+              <FacebookIcon />
+              <span>Recovery Community</span>
             </a>
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Follow us on Instagram" className="hover:opacity-80 transition-opacity">
-                <InstagramIcon />
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Daily Inspiration on Instagram" className="flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary transition-colors">
+              <InstagramIcon />
+              <span>@SacredStepsRecovery</span>
             </a>
-            <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="Follow us on X" className="text-main hover:opacity-80 transition-opacity">
-                <XIcon />
+            <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="Follow us on X" className="flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary transition-colors">
+              <XIcon />
+              <span>Updates & Prayers</span>
             </a>
+          </div>
+
+          {/* Legal and Privacy Navigation Tabs */}
+          <div className="flex flex-wrap justify-center items-center gap-3 pt-3">
+            <button
+              id="footer-tab-privacy-policy"
+              onClick={() => handleOpenLegalModal('privacy')}
+              className="px-4 py-1.5 rounded-full bg-card-secondary hover:bg-card border border-default text-xs font-semibold text-muted hover:text-primary transition-all cursor-pointer shadow-2xs flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+              </svg>
+              <span>Privacy Policy</span>
+            </button>
+            <span className="text-default hidden sm:inline">&bull;</span>
+            <button
+              id="footer-tab-terms-conditions"
+              onClick={() => handleOpenLegalModal('terms')}
+              className="px-4 py-1.5 rounded-full bg-card-secondary hover:bg-card border border-default text-xs font-semibold text-muted hover:text-primary transition-all cursor-pointer shadow-2xs flex items-center gap-2"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+                <line x1="16" y1="13" x2="8" y2="13" />
+                <line x1="16" y1="17" x2="8" y2="17" />
+              </svg>
+              <span>Terms &amp; Conditions</span>
+            </button>
+          </div>
+
+          <div className="pt-6 border-t border-default/50 text-xs text-muted/80 flex flex-col sm:flex-row justify-between items-center gap-2">
+            <p>Version 1.0 &bull; 2026 Edition &bull; Copyright &copy; 2025 Kya Daisy Publishing. All rights reserved.</p>
+            <p className="text-[11px]">
+              Crisis Helpline: Call or text <span className="font-bold text-main">988</span> (Suicide & Crisis Lifeline) or <span className="font-bold text-main">1-800-662-4357</span> (SAMHSA).
+            </p>
+          </div>
         </div>
       </footer>
       <UndoToast
@@ -846,6 +1080,11 @@ const App: React.FC = () => {
         onUndo={handleUndo}
       />
       <NotificationToast toast={toast} />
+      <LegalModal
+        isOpen={isLegalModalOpen}
+        onClose={() => setIsLegalModalOpen(false)}
+        initialTab={legalModalTab}
+      />
       <SettingsModal 
         isOpen={isSettingsOpen}
         onClose={() => setIsSettingsOpen(false)}
