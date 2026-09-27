@@ -47,6 +47,9 @@ export const TextToSpeechButton: React.FC<TextToSpeechButtonProps> = ({ textToSp
             sourceNodeRef.current.stop();
             sourceNodeRef.current = null;
         }
+        if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+            window.speechSynthesis.cancel();
+        }
         if (errorTimerRef.current) {
             clearTimeout(errorTimerRef.current);
             errorTimerRef.current = null;
@@ -85,9 +88,23 @@ export const TextToSpeechButton: React.FC<TextToSpeechButtonProps> = ({ textToSp
             setStatus('playing');
 
         } catch (e) {
-            console.error("TTS Error:", e);
+            console.warn("Cloud TTS unavailable, using browser speech synthesis:", e);
+            if (typeof window !== 'undefined' && 'speechSynthesis' in window) {
+                try {
+                    window.speechSynthesis.cancel();
+                    const utterance = new SpeechSynthesisUtterance(textToSpeak);
+                    utterance.rate = 0.92;
+                    utterance.onstart = () => setStatus('playing');
+                    utterance.onend = () => setStatus('idle');
+                    utterance.onerror = () => setStatus('idle');
+                    window.speechSynthesis.speak(utterance);
+                    return;
+                } catch (synthErr) {
+                    console.error("Browser speech synthesis failed:", synthErr);
+                }
+            }
             setStatus('error');
-            onShowToast("Audio could not be generated. Please try again later.", 'error');
+            onShowToast("Audio narration could not be played.", 'error');
             
             if (errorTimerRef.current) clearTimeout(errorTimerRef.current);
             errorTimerRef.current = window.setTimeout(() => {

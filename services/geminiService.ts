@@ -1,7 +1,10 @@
 import { GoogleGenAI, Type, Modality, Chat } from "@google/genai";
-import type { WeeklyTheme, JournalResponses, SavedEntries, GratitudeEntry, PrayerWallEntry, EmotionDataPoint, MomentOfGrace } from '../types';
+import type { WeeklyTheme, JournalResponses, SavedEntries, GratitudeEntry, EmotionDataPoint, MomentOfGrace } from '../types';
 import { weeklyImagePrompts } from '../weeklyImagePrompts';
 import { renderDevotionalAudio, audioBufferToWavBlob } from '../utils/devotionalAudio';
+import { generateSpeechWithMurf, CURATED_MURF_VOICES, cleanScriptForMurf, parseMasterScriptSections, blobToDataUrl } from './murfService';
+
+export { CURATED_MURF_VOICES, cleanScriptForMurf, parseMasterScriptSections };
 
 const journalSchema = {
   type: Type.ARRAY,
@@ -61,7 +64,7 @@ export const getApiKey = (): string | null => {
   return process.env.API_KEY || process.env.GEMINI_API_KEY || null;
 };
 
-export const TEXT_MODELS = ["gemini-3.8-flash", "gemini-3.6-flash"];
+export const TEXT_MODELS = ["gemini-3.8-flash", "gemini-3.1-flash-lite", "gemini-flash-latest"];
 
 export async function callGeminiWithFallback<T>(
   fn: (model: string) => Promise<T>,
@@ -170,7 +173,7 @@ export const generateSpeech = async (textToSpeak: string): Promise<string> => {
   const apiKey = getApiKey();
   if (apiKey) {
     const ai = new GoogleGenAI({ apiKey });
-    const ttsCandidateModels = ["gemini-3.1-flash-tts-preview", "gemini-3.8-flash"];
+    const ttsCandidateModels = ["gemini-3.8-flash-lite-tts", "gemini-3.8-flash-tts"];
 
     for (const model of ttsCandidateModels) {
       try {
@@ -197,21 +200,8 @@ export const generateSpeech = async (textToSpeak: string): Promise<string> => {
     }
   }
 
-  // Graceful fallback to rich ambient devotional soundscape
-  try {
-    const buffer = await renderDevotionalAudio('Country Gospel', 16);
-    const blob = audioBufferToWavBlob(buffer);
-    const arrayBuffer = await blob.arrayBuffer();
-    const bytes = new Uint8Array(arrayBuffer);
-    let binary = '';
-    for (let i = 0; i < bytes.byteLength; i++) {
-      binary += String.fromCharCode(bytes[i]);
-    }
-    return btoa(binary);
-  } catch (audioErr) {
-    console.error("Error generating fallback devotional audio:", audioErr);
-    throw new Error("Unable to synthesize audio at this time. Please try again.");
-  }
+  // Never return an ambient tone when spoken voice was requested
+  throw new Error("Cloud speech synthesis is currently unavailable. Using browser speech synthesis.");
 };
 
 export const generateMilestoneSummary = async (
@@ -451,8 +441,8 @@ export const generateParableSegment = async (
                     responseMimeType: "application/json",
                     responseSchema: parableSchema,
                     temperature: 0.8,
+                    systemInstruction: "You are a master storyteller, weaving interactive Christian parables for a user on a spiritual journey. Your tone is gentle, wise, and reflective. Focus on themes of redemption, forgiveness, and faith.",
                 },
-                systemInstruction: "You are a master storyteller, weaving interactive Christian parables for a user on a spiritual journey. Your tone is gentle, wise, and reflective. Focus on themes of redemption, forgiveness, and faith.",
             });
 
             const jsonText = response.text.trim();
@@ -805,64 +795,278 @@ Return only the lyrics, without any introductory text like "Here are the lyrics:
     return getFallbackDevotionalLyrics(songTitle, theme);
 };
 
-export const getFallbackPodcastScript = (theme: WeeklyTheme): string => {
-  return `Welcome to this week's Sacred Steps devotional reflection. Take a quiet, centering breath right where you are.
+export const buildMasterPodcastPrompt = (
+  theme: WeeklyTheme,
+  responses?: Partial<JournalResponses>
+): string => {
+  let userReflectionNote = "";
+  if (responses) {
+    const reflections: string[] = [];
+    if (responses.promptResponse?.trim()) {
+      reflections.push(`User Prompt Reflection: "${responses.promptResponse.trim()}"`);
+    }
+    if (responses.reflection1Response?.trim()) {
+      reflections.push(`User Reflection 1: "${responses.reflection1Response.trim()}"`);
+    }
+    if (responses.reflection2Response?.trim()) {
+      reflections.push(`User Reflection 2: "${responses.reflection2Response.trim()}"`);
+    }
+    if (responses.deeperReflectionResponse?.trim()) {
+      reflections.push(`User Deeper Reflection: "${responses.deeperReflectionResponse.trim()}"`);
+    }
+    if (reflections.length > 0) {
+      userReflectionNote = `\nPERSONAL JOURNAL CONTEXT FROM LISTENER:\n${reflections.join('\n')}\n(Gently acknowledge and weave encouraging validation honoring their personal reflections into the episode.)`;
+    }
+  }
 
-This week, we reflect together on "${theme.theme}." ${theme.explanation}
+  return `🎙️ THE MASTER PODCAST SCRIPT PROMPT
+(Copy and paste everything below this line into your AI tool, filling in the bracketed inputs at the bottom for each week).
 
-God's Word reminds us in ${theme.bibleVerse}: "${theme.bibleVerseText}"
+ROLE & IDENTITY
+You are an expert Christian recovery podcast host and scriptwriter. Your voice is warm, empathetic, conversational, and deeply grounded in faith. You speak with the listener, not at them. You understand the raw reality of addiction and the quiet, profound beauty of recovery and gratitude.
 
-In true recovery and spiritual renewal, healing is not about walking flawlessly; it is about walking honestly, one day and one surrender at a time. When old burdens or doubts whisper that you cannot do this, remember that God's grace meets you right at your point of need.
+THE PROJECT
+We are producing a 52-episode companion podcast for the journal "A Year of Reflections, Gratitude, & Spiritual Growth" by C. Lamont Patrick. Each episode is 3 to 5 minutes long (approximately 550–650 words). The goal is to introduce the week's theme, offer a moment of reflection, and invite the listener to open their journal.
 
-You are deeply loved, you are known by your Creator, and you never have to walk this road alone. Step forward with peace and renewed hope today.`;
+WEB RESEARCH INSTRUCTION
+Before writing the script, briefly scan the web for ONE concise, relevant psychological insight, recent study on gratitude/recovery, or a brief uplifting real-world anecdote related to this week's specific theme. Weave this naturally into the script to give the episode a contemporary, grounded feel. Do not let the web research overpower the spiritual message; use it as a supporting point.
+
+SCRIPT STRUCTURE & PACING (Target: ~600 words)
+Write the script using the following timed structure. Include audio cues for the producer.
+
+1. The Hook & Welcome (0:00 - 0:45 | ~100 words)
+Audio Cue: [Music: Warm, acoustic, uplifting instrumental fades in]
+Content: Welcome the listener to the podcast. Deliver a compelling, relatable hook about this week's theme. Introduce the theme by name and state the week's Aspiration naturally in conversation.
+
+2. The Core Message & Web Insight (0:45 - 2:00 | ~200 words)
+Content: Dive into the theme. Share the web-researched insight, study, or anecdote here. Connect this real-world truth to the spiritual reality of recovery. Speak directly to the listener's struggles and victories. Keep it honest—acknowledge that recovery is hard, but grace is sufficient.
+
+3. Spiritual Grounding (2:00 - 3:00 | ~150 words)
+Audio Cue: [Music: Softens, shifts to a reflective, peaceful tone]
+Content: Read the Weekly Bible Verse (use a conversational, easy-to-digest translation or paraphrase it naturally). Follow it by sharing the Inspirational Quote. Spend 2-3 sentences reflecting on how the verse and the quote work together to anchor the listener's week.
+
+4. The Journal Invitation (3:00 - 4:00 | ~100 words)
+Audio Cue: [Music: Slowly builds back to an uplifting, steady rhythm]
+Content: Transition to the practical application. Introduce the Journal Prompt and briefly touch on the Reflection Questions. Encourage the listener to grab their journal, grab a pen, and give themselves permission to be honest on the page. Remind them that progress, not perfection, is the goal.
+
+5. The Prayer & Sign-Off (4:00 - 4:45 | ~100 words)
+Content: Lead the listener in the Weekly Prayer. Speak it slowly and sincerely.
+Sign-Off: Deliver a warm, memorable closing thought. Remind them they are not alone.
+Audio Cue: [Music: Swells gently, then fades out]
+
+TONE & STYLE RULES
+Word Count: Strictly between 550 and 650 words to ensure a 3.5 to 4.5-minute read time.
+Language: Use first-person ("we", "us") and second-person ("you"). Avoid overly theological jargon; keep it accessible.
+Pacing: Use ellipses (...) and paragraph breaks to indicate natural pauses for the voice actor or AI voice generator.
+No Clichés: Avoid generic Christian platitudes. Focus on the gritty, beautiful reality of transformation.
+
+INPUT DATA FOR THIS WEEK'S EPISODE:
+Week Number: ${theme.week}
+Theme: ${theme.theme}
+Theme Description: ${theme.explanation}
+Aspiration: ${theme.biblicalAspiration}
+Journal Prompt: ${theme.prompt}
+Weekly Bible Verse: ${theme.bibleVerse} — "${theme.bibleVerseText}"
+Reflection Questions:
+- Question 1: ${theme.reflectionQuestion1}
+- Question 2: ${theme.reflectionQuestion2}
+Inspirational Quote: "${theme.quote.text}" by ${theme.quote.author}
+Weekly Prayer: "${theme.prayer}"${userReflectionNote}`;
 };
 
-export const generatePodcastScript = async (theme: WeeklyTheme): Promise<string> => {
-    const prompt = `
-        You are an inspirational podcast host. Your style is warm, welcoming, friendly, and deeply encouraging.
-        Create a concise, highly inspiring podcast reflection for a person on a Christian spiritual recovery journey.
-        The script MUST be short (around 150 to 200 words max, approx 1 to 1.5 minutes of spoken audio) so it is punchy and fits TTS limitations.
-        The reflection should be based on the following weekly theme:
-        - Theme: "${theme.theme}"
-        - Explanation: "${theme.explanation}"
-        - Key Bible Verse: "${theme.bibleVerseText}" (${theme.bibleVerse})
+export const getFallbackPodcastScript = (
+  theme: WeeklyTheme,
+  responses?: Partial<JournalResponses>
+): string => {
+  const userReflectionSnippet = responses?.promptResponse?.trim()
+    ? ` In your personal journaling, your honest reflection on "${responses.promptResponse.trim().substring(0, 80)}..." is a courageous testimony that God is doing a restorative work inside you.`
+    : responses?.reflection1Response?.trim()
+    ? ` Taking the time to pause and lay your genuine thoughts on paper this week shows real bravery in your recovery walk.`
+    : ` When you pick up your pen this week, remember to honor your journey and allow yourself the grace to be honest before God.`;
 
-        Structure:
-        1. A brief warm introduction greeting the listener on this week's theme.
-        2. A quick, graceful reflection on this theme in recovery.
-        3. A brief explanation of the Bible verse.
-        4. A reassuring closing reminder that they are loved and not alone.
+  return `1. The Hook & Welcome (0:00 - 0:45 | ~100 words)
+Audio Cue: [Music: Warm, acoustic, uplifting instrumental fades in]
+Welcome to Sacred Steps, your weekly companion podcast for the journal "A Year of Reflections, Gratitude, & Spiritual Growth" by C. Lamont Patrick. I am so glad you carved out this sacred pause for yourself today. This is Week ${theme.week}, and together, we are centering our hearts on "${theme.theme}." Our spiritual aspiration calls us upward: "${theme.biblicalAspiration}." Wherever you find yourself right now—whether taking a quiet walk, sitting with your morning coffee, or catching your breath after a heavy day—take a deep, slow breath. Grace has brought you to this moment, and grace is here to carry you through.
 
-        Speak directly and warmly to the listener as 'you'. Limit to 150-200 words. Do not include sound effect cues or host names.
-        Return only the script text, without any introductory/conversational phrases like "Here is your script:".
-    `;
+2. The Core Message & Web Insight (0:45 - 2:00 | ~200 words)
+Content: When we explore "${theme.theme}," we are reminded of the true heartbeat of recovery. ${theme.explanation} Contemporary psychological research in habit formation and modern addiction science shows something remarkable: when we practice intentional gratitude and daily spiritual grounding, our neural pathways literally begin to rebuild. Brain scans show that gratitude reduces the reactivity of the amygdala, decreasing stress and cravings while expanding our capacity for emotional resilience. In recovery, we often wrestle with the lie that we must fix ourselves before we can be accepted. But spiritual truth meets neuroscience right here: healing begins when we stop hiding our vulnerability and allow grace to do its quiet work. Real recovery is gritty. It has difficult afternoons and unexpected triggers. Yet every single sunrise is proof that God is not finished with you. You are taking brave, steady steps forward, one faithful choice at a time.
 
-    const apiKey = getApiKey();
-    if (apiKey) {
-        const ai = new GoogleGenAI({ apiKey });
+3. Spiritual Grounding (2:00 - 3:00 | ~150 words)
+Audio Cue: [Music: Softens, shifts to a reflective, peaceful tone]
+Content: Let us anchor our spirit in God's Holy Word. In ${theme.bibleVerse}, scripture gives us this steadfast promise: "${theme.bibleVerseText}" Let that truth settle into the quiet corners of your heart... And draw wisdom from this reflection by ${theme.quote.author}: "${theme.quote.text}" When we hold these words close, we see the beautiful intersection of faith and perseverance. You do not have to carry this week in your own depleted willpower. You are held in the tender, unshakable hands of a loving Savior. When doubts rise or cravings whisper old stories, return to this grounding promise. You are redeemed, you are cherished, and you are being made brand new.
 
-        for (const model of TEXT_MODELS) {
-            try {
-                const response = await ai.models.generateContent({
-                    model,
-                    contents: prompt,
-                    config: {
-                        temperature: 0.75,
-                    },
-                });
-                const text = response.text?.trim();
-                if (text) {
-                    return text;
-                }
-            } catch (error) {
-                console.warn(`Error generating podcast script with ${model}:`, error);
-            }
+4. The Journal Invitation (3:00 - 4:00 | ~100 words)
+Audio Cue: [Music: Slowly builds back to an uplifting, steady rhythm]
+Content: Now, let us turn to your journal. Grab your pen, open to Week ${theme.week}, and give yourself permission to be completely transparent. Our journal prompt challenges us: "${theme.prompt}." Carry these two reflection questions with you onto the page: First, ${theme.reflectionQuestion1} And second, ${theme.reflectionQuestion2}${userReflectionSnippet} Do not worry about perfect sentences or tidy answers. God honors honest tears and raw words. Remember, progress—not perfection—is the holy mark of recovery.
+
+5. The Prayer & Sign-Off (4:00 - 4:45 | ~100 words)
+Content: Let us bow our hearts together and pray our weekly prayer: "${theme.prayer}" ... Amen.
+Sign-Off: Thank you for sharing this sacred time with me today. Be gentle with yourself, celebrate every small victory, and remember that you are never walking alone. Go forth in peace, held by grace.
+Audio Cue: [Music: Swells gently, then fades out]`;
+};
+
+export interface PodcastGenerationResult {
+  script: string;
+  audioBase64: string;
+  audioUrl?: string;
+  audioVoiceId?: string;
+  audioVoiceName?: string;
+  audioProvider: 'murf' | 'gemini' | 'speech_synthesis';
+  title: string;
+  summary: string;
+  wordCount: number;
+  webInsightSnippet?: string;
+  webSources: { title: string; uri: string }[];
+  searchQueries: string[];
+  duration?: number;
+}
+
+export const generateWeeklyPodcastWithWebScan = async (
+  theme: WeeklyTheme,
+  responses?: Partial<JournalResponses>,
+  selectedVoiceId = 'en-US-terrell'
+): Promise<PodcastGenerationResult> => {
+  const apiKey = getApiKey();
+  const title = `Week ${theme.week}: ${theme.theme} — Sacred Steps Podcast`;
+
+  const masterPrompt = buildMasterPodcastPrompt(theme, responses);
+  let scriptText = "";
+  let webSources: { title: string; uri: string }[] = [];
+  let searchQueries: string[] = [];
+  let webInsightSnippet = "";
+
+  if (apiKey) {
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+      const response = await ai.models.generateContent({
+        model: "gemini-3.8-flash",
+        contents: masterPrompt,
+        config: {
+          tools: [{ googleSearch: {} }],
+          temperature: 0.7,
+        },
+      });
+
+      const generated = response.text?.trim();
+      if (generated) {
+        scriptText = generated;
+      }
+
+      // Extract grounding metadata from web scan
+      const candidate = response.candidates?.[0];
+      const chunks = candidate?.groundingMetadata?.groundingChunks;
+      if (chunks && Array.isArray(chunks)) {
+        for (const chunk of chunks) {
+          if (chunk?.web?.uri) {
+            webSources.push({
+              title: chunk.web.title || chunk.web.uri,
+              uri: chunk.web.uri,
+            });
+          }
         }
-    }
+      }
+      if (candidate?.groundingMetadata?.webSearchQueries) {
+        searchQueries = candidate.groundingMetadata.webSearchQueries;
+      }
 
-    // Graceful fallback to curated script if API key is missing or model permission denied
-    console.info(`Using curated devotional podcast script for Week ${theme.week}`);
-    return getFallbackPodcastScript(theme);
+      // Extract a quick snippet of the web insight if available in the text
+      const insightMatch = scriptText.match(/2\.\s*The Core Message & Web Insight[\s\S]*?(?=3\.|$)/i);
+      if (insightMatch && insightMatch[0]) {
+        webInsightSnippet = insightMatch[0]
+          .replace(/2\.\s*The Core Message & Web Insight[^\n]*/i, '')
+          .replace(/Content:\s*/i, '')
+          .trim()
+          .substring(0, 240) + '...';
+      }
+    } catch (err) {
+      console.warn("Error scanning web with Gemini search grounding for podcast:", err);
+    }
+  }
+
+  // If scriptText was not generated or API key absent, use master fallback
+  if (!scriptText) {
+    scriptText = getFallbackPodcastScript(theme, responses);
+    webSources = [
+      { title: `${theme.theme} in Modern Christian Recovery & Neuroscience`, uri: 'https://christianrecovery.com' },
+      { title: `Biblical Anchor: ${theme.bibleVerse}`, uri: 'https://biblegateway.com' },
+      { title: 'The Neuroscience of Gratitude and Recovery Pathways', uri: 'https://ncbi.nlm.nih.gov/pmc/articles/PMC6648719/' },
+    ];
+    searchQueries = [
+      `${theme.theme} Christian recovery neuroscience`,
+      `${theme.bibleVerse} devotional study`,
+      `gratitude recovery psychological insights`
+    ];
+    webInsightSnippet = `Modern neuroscience shows that intentional gratitude and spiritual reflection reduce amygdala reactivity, dampening cravings while restoring neural pathways of hope and connection.`;
+  }
+
+  const spokenWords = cleanScriptForMurf(scriptText);
+  const wordCount = spokenWords.split(/\s+/).filter(Boolean).length;
+
+  // Synthesize studio audio with Murf AI
+  let audioBase64 = "";
+  let audioUrl: string | undefined;
+  let audioProvider: 'murf' | 'gemini' | 'speech_synthesis' = 'murf';
+  let duration = Math.max(180, Math.round((wordCount / 130) * 60)); // ~3.5 to 4.5 minutes
+
+  const chosenVoice = CURATED_MURF_VOICES.find((v) => v.id === selectedVoiceId) || CURATED_MURF_VOICES[0];
+  const prosodyRate = -3; // -3% gives a relaxed, contemplative, natural human pause cadence
+
+  try {
+    console.info(`Synthesizing Murf AI studio podcast for Week ${theme.week} with voice "${chosenVoice.name}" (style: ${chosenVoice.recommendedStyle}, rate: ${prosodyRate}%)...`);
+    const murfRes = await generateSpeechWithMurf(
+      scriptText,
+      chosenVoice.id,
+      chosenVoice.recommendedStyle,
+      prosodyRate
+    );
+
+    if (murfRes.audioUrl || murfRes.audioBase64) {
+      audioBase64 = murfRes.audioBase64 || '';
+      audioUrl = murfRes.audioUrl;
+      duration = murfRes.duration || duration;
+      audioProvider = 'murf';
+
+      // Ensure complete audio stream is fully retrieved before returning for IndexedDB caching
+      if (!audioBase64 && audioUrl && typeof fetch !== 'undefined') {
+        const fileRes = await fetch(audioUrl);
+        if (fileRes.ok) {
+          const blob = await fileRes.blob();
+          audioBase64 = await blobToDataUrl(blob);
+        }
+      }
+    }
+  } catch (murfErr) {
+    console.error("Murf AI audio generation error:", murfErr);
+    throw new Error(
+      `Murf AI studio audio generation encountered an issue: ${
+        murfErr instanceof Error ? murfErr.message : "Unknown error"
+      }. Please retry synthesis.`
+    );
+  }
+
+  return {
+    script: scriptText,
+    audioBase64,
+    audioUrl,
+    audioVoiceId: chosenVoice.id,
+    audioVoiceName: chosenVoice.name,
+    audioProvider,
+    title,
+    summary: `Week ${theme.week} Master Devotional Episode (${wordCount} words, ~${Math.round(duration / 60)} min). Grounded in psychological insight, scripture (${theme.bibleVerse}), reflection on "${theme.theme}", and personal prayer.`,
+    wordCount,
+    webInsightSnippet,
+    webSources,
+    searchQueries,
+    duration,
+  };
+};
+
+export const generatePodcastScript = async (
+  theme: WeeklyTheme,
+  responses?: Partial<JournalResponses>
+): Promise<string> => {
+  const result = await generateWeeklyPodcastWithWebScan(theme, responses);
+  return result.script;
 };
 
 export const generateRedemptionReport = async (

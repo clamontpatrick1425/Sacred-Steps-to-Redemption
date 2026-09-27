@@ -1,16 +1,18 @@
 
 import React, { useState, useEffect } from 'react';
-import type { WeeklyTheme, JournalResponses, UndoAction, SavedEntries } from '../types';
+import type { WeeklyTheme, JournalResponses, UndoAction, SavedEntries, WeeklyPodcastData } from '../types';
 import { PrintPreviewModal } from './PrintPreviewModal';
-import { exportCurrentWeekToPDFWithCanvas } from '../utils/pdfExport';
+import { exportCurrentWeekToPDF, exportCurrentWeekToPDFWithCanvas } from '../utils/pdfExport';
 import { generatePersonalPrayer, generateDeeperReflectionPrompt, generateGoalSuggestions } from '../services/geminiService';
 import { TextToSpeechButton } from './TextToSpeechButton';
 import { ImageSkeleton } from './ImageSkeleton';
 import { AudioRecorderButton } from './AudioRecorderButton';
 import { QRCodeModal } from './QRCodeModal';
 import { GuidedMeditation } from './GuidedMeditation';
-import { decode } from '../utils/audioUtils';
 import { WeeklySongCard } from './WeeklySongCard';
+import { WeeklyPodcastCard } from './WeeklyPodcastCard';
+import { ShareCommunityModal } from './ShareCommunityModal';
+import type { ShareContentType } from '../utils/shareUtils';
 
 interface JournalEntryProps {
   entry: WeeklyTheme | null;
@@ -27,18 +29,20 @@ interface JournalEntryProps {
   onGenerateLyrics: (week: number, theme: WeeklyTheme) => void;
   podcast: string | null;
   isGeneratingPodcast: boolean;
-  onGeneratePodcast: (week: number, theme: WeeklyTheme) => void;
+  onGeneratePodcast: (week: number, theme: WeeklyTheme, responses?: Partial<JournalResponses>) => Promise<WeeklyPodcastData | string | void>;
   lastChange: UndoAction | null;
   onUndo: () => void;
   allThemes: WeeklyTheme[];
   allResponses: SavedEntries;
   allImages: { [week: number]: string };
+  user?: { name?: string; email?: string } | null;
 }
 
 const LIMITS = {
     personalGoal: 300,
     promptResponse: 3000,
     reflectionResponse: 1500,
+    gratitudeNotes: 2000,
 };
 
 const InfoCard: React.FC<{ title: string; children: React.ReactNode; icon?: React.ReactNode; action?: React.ReactNode; className?: string; }> = ({ title, children, icon, action, className }) => (
@@ -192,10 +196,29 @@ const DocumentPdfIcon = () => (
     </svg>
 );
 
+const ShareIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+    </svg>
+);
 
-export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, onResponseChange, onShowToast, isFocusMode, onToggleFocusMode, imageUrl, onGenerateImage, isGeneratingImage, lyrics, isGeneratingLyrics, onGenerateLyrics, podcast, isGeneratingPodcast, onGeneratePodcast, lastChange, onUndo, allThemes, allResponses, allImages }) => {
+const ShareMiniIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+    </svg>
+);
+
+
+export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, onResponseChange, onShowToast, isFocusMode, onToggleFocusMode, imageUrl, onGenerateImage, isGeneratingImage, lyrics, isGeneratingLyrics, onGenerateLyrics, podcast, isGeneratingPodcast, onGeneratePodcast, lastChange, onUndo, allThemes, allResponses, allImages, user }) => {
   const [isPrintModalOpen, setPrintModalOpen] = useState(false);
   const [isExportingPDF, setIsExportingPDF] = useState(false);
+  const [isShareModalOpen, setShareModalOpen] = useState(false);
+  const [shareContentType, setShareContentType] = useState<ShareContentType>('summary');
+
+  const handleOpenShare = (contentType: ShareContentType = 'summary') => {
+    setShareContentType(contentType);
+    setShareModalOpen(true);
+  };
   const [personalizedPrayer, setPersonalizedPrayer] = useState<string | null>(null);
   const [isGeneratingPrayer, setIsGeneratingPrayer] = useState(false);
   const [prayerError, setPrayerError] = useState<string | null>(null);
@@ -210,9 +233,6 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
   const [isGeneratingGoals, setIsGeneratingGoals] = useState(false);
   const [goalError, setGoalError] = useState<string | null>(null);
   
-  // State for Podcast Player
-  const [podcastAudioUrl, setPodcastAudioUrl] = useState<string | null>(null);
-
   useEffect(() => {
     // Reset AI-generated content when the week (entry) changes to avoid showing stale data
     setPersonalizedPrayer(null);
@@ -222,77 +242,6 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
     setGoalSuggestions([]);
     setGoalError(null);
   }, [entry?.week]);
-
-  useEffect(() => {
-    let url: string | null = null;
-    if (podcast) {
-        try {
-            if (podcast.startsWith('data:') || podcast.startsWith('blob:')) {
-                setPodcastAudioUrl(podcast);
-                return;
-            }
-            const pcmData = decode(podcast);
-            // Check if already a valid RIFF/WAV file
-            if (pcmData.length >= 12 &&
-                String.fromCharCode(pcmData[0], pcmData[1], pcmData[2], pcmData[3]) === 'RIFF') {
-                const wavBlob = new Blob([pcmData], { type: 'audio/wav' });
-                url = URL.createObjectURL(wavBlob);
-                setPodcastAudioUrl(url);
-                return;
-            }
-
-            const sampleRate = 24000;
-            const numChannels = 1;
-            const bitsPerSample = 16;
-            const dataSize = pcmData.length;
-            const blockAlign = (numChannels * bitsPerSample) / 8;
-            const byteRate = sampleRate * blockAlign;
-
-            const buffer = new ArrayBuffer(44 + dataSize);
-            const view = new DataView(buffer);
-
-            const writeString = (view: DataView, offset: number, string: string) => {
-                for (let i = 0; i < string.length; i++) {
-                    view.setUint8(offset + i, string.charCodeAt(i));
-                }
-            };
-            
-            writeString(view, 0, 'RIFF');
-            view.setUint32(4, 36 + dataSize, true);
-            writeString(view, 8, 'WAVE');
-            writeString(view, 12, 'fmt ');
-            view.setUint32(16, 16, true);
-            view.setUint16(20, 1, true); // PCM
-            view.setUint16(22, numChannels, true);
-            view.setUint32(24, sampleRate, true);
-            view.setUint32(28, byteRate, true);
-            view.setUint16(32, blockAlign, true);
-            view.setUint16(34, bitsPerSample, true);
-            writeString(view, 36, 'data');
-            view.setUint32(40, dataSize, true);
-
-            const pcmAsUint8 = new Uint8Array(pcmData);
-            for (let i = 0; i < pcmAsUint8.length; i++) {
-                view.setUint8(44 + i, pcmAsUint8[i]);
-            }
-
-            const wavBlob = new Blob([view], { type: 'audio/wav' });
-            url = URL.createObjectURL(wavBlob);
-            setPodcastAudioUrl(url);
-        } catch (error) {
-            console.error("Failed to create WAV file from podcast data", error);
-            setPodcastAudioUrl(null);
-        }
-    } else {
-        setPodcastAudioUrl(null);
-    }
-
-    return () => {
-        if (url) {
-            URL.revokeObjectURL(url);
-        }
-    };
-}, [podcast]);
 
   if (!entry) {
     return <div className="text-center p-8">Select a week to begin your journey.</div>;
@@ -380,10 +329,11 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
     if (!entry) return;
     setIsExportingPDF(true);
     try {
-      const result = await exportCurrentWeekToPDFWithCanvas({
+      const result = exportCurrentWeekToPDF({
         entry,
         responses,
         imageUrl,
+        user,
       });
 
       if (result.success) {
@@ -412,6 +362,15 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
           >
             {isFocusMode ? <FocusExitIcon /> : <FocusEnterIcon />}
             Focus
+          </button>
+          <button
+            onClick={() => handleOpenShare('summary')}
+            className="no-print flex items-center bg-card text-muted px-3 py-2 rounded-lg shadow-md hover:bg-card-secondary hover:text-main focus:outline-none focus:ring-2 focus:ring-offset-2 ring-primary transition-colors text-sm font-medium"
+            aria-label="Share weekly reflections to community and social platforms"
+            title="Share to Community and Social Platforms"
+          >
+            <ShareIcon />
+            <span>Share</span>
           </button>
           <button
             onClick={() => setPrintModalOpen(true)}
@@ -522,29 +481,14 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
             )}
         </header>
         
-        <InfoCard title="Weekly Podcast" icon={<MicrophoneIcon />}>
-            <p className="text-sm text-muted mb-4">
-                Listen to a short, AI-generated podcast inspired by this week's theme of '{entry.theme}'.
-            </p>
-            {!podcast && (
-                <button
-                    onClick={() => onGeneratePodcast(entry.week, entry)}
-                    disabled={isGeneratingPodcast}
-                    className="flex items-center justify-center w-full sm:w-auto px-4 py-2 text-sm bg-primary text-on-primary rounded-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 ring-primary transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                    {isGeneratingPodcast ? (
-                        <><LoadingSpinnerIcon /> <span className="ml-2">Generating Podcast...</span></>
-                    ) : "Generate Podcast"}
-                </button>
-            )}
-            {podcastAudioUrl && (
-                <div className="mt-4 animate-fade-in">
-                    <audio controls className="w-full" src={podcastAudioUrl}>
-                        Your browser does not support the audio element.
-                    </audio>
-                </div>
-            )}
-        </InfoCard>
+        <WeeklyPodcastCard
+          entry={entry}
+          responses={responses}
+          podcastAudio={podcast}
+          isGeneratingPodcast={isGeneratingPodcast}
+          onGeneratePodcast={onGeneratePodcast}
+          onShowToast={onShowToast}
+        />
 
         <div className="grid md:grid-cols-2 gap-6">
           <InfoCard 
@@ -642,6 +586,16 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                         <UndoButton onUndo={onUndo} />
                     )}
                     <CharacterCount current={(responses.promptResponse || '').length} max={LIMITS.promptResponse} />
+                    <button
+                        type="button"
+                        onClick={() => handleOpenShare('prompt')}
+                        className="flex items-center text-xs font-medium text-muted hover:text-primary transition-colors px-1.5 py-0.5 rounded hover:bg-card-secondary"
+                        title="Share this prompt reflection to community and socials"
+                        aria-label="Share prompt response"
+                    >
+                        <ShareMiniIcon />
+                        <span className="ml-1 hidden sm:inline">Share</span>
+                    </button>
                     <AudioRecorderButton 
                         onTranscription={(text) => onResponseChange(entry.week, 'promptResponse', (responses.promptResponse || '') + ' ' + text)}
                         onShowToast={onShowToast}
@@ -681,6 +635,16 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                                 <UndoButton onUndo={onUndo} />
                             )}
                             <CharacterCount current={(responses.reflection1Response || '').length} max={LIMITS.reflectionResponse} />
+                            <button
+                                type="button"
+                                onClick={() => handleOpenShare('reflection1')}
+                                className="flex items-center text-xs font-medium text-muted hover:text-primary transition-colors px-1.5 py-0.5 rounded hover:bg-card-secondary"
+                                title="Share this reflection to community and socials"
+                                aria-label="Share reflection 1 response"
+                            >
+                                <ShareMiniIcon />
+                                <span className="ml-1 hidden sm:inline">Share</span>
+                            </button>
                             <AudioRecorderButton 
                                 onTranscription={(text) => onResponseChange(entry.week, 'reflection1Response', (responses.reflection1Response || '') + ' ' + text)}
                                 onShowToast={onShowToast}
@@ -715,6 +679,16 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                                 <UndoButton onUndo={onUndo} />
                             )}
                             <CharacterCount current={(responses.reflection2Response || '').length} max={LIMITS.reflectionResponse} />
+                            <button
+                                type="button"
+                                onClick={() => handleOpenShare('reflection2')}
+                                className="flex items-center text-xs font-medium text-muted hover:text-primary transition-colors px-1.5 py-0.5 rounded hover:bg-card-secondary"
+                                title="Share this reflection to community and socials"
+                                aria-label="Share reflection 2 response"
+                            >
+                                <ShareMiniIcon />
+                                <span className="ml-1 hidden sm:inline">Share</span>
+                            </button>
                             <AudioRecorderButton 
                                 onTranscription={(text) => onResponseChange(entry.week, 'reflection2Response', (responses.reflection2Response || '') + ' ' + text)}
                                 onShowToast={onShowToast}
@@ -806,11 +780,63 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
           </div>
         </div>
 
+        {/* Weekly Gratitude Notes & Tangible Blessings */}
+        <InfoCard 
+          title="Weekly Gratitude Notes & Tangible Blessings" 
+          icon={
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+            </svg>
+          }
+          className="border border-amber-500/30 bg-gradient-to-br from-card via-card to-amber-500/5 shadow-sm"
+          action={
+            <div className="flex items-center space-x-2">
+              <TextToSpeechButton textToSpeak={responses.gratitudeNotes || "No gratitude notes recorded yet."} onShowToast={onShowToast} />
+            </div>
+          }
+        >
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-3">
+            <p className="text-sm text-muted">
+              Document tangible gifts, daily blessings, and moments of grace from this week. These notes are permanently compiled and included in your exported PDF.
+            </p>
+            <div className="flex items-center space-x-3 self-end sm:self-auto">
+              {lastChange?.week === entry.week && lastChange?.field === 'gratitudeNotes' && (
+                <UndoButton onUndo={onUndo} />
+              )}
+              <CharacterCount current={(responses.gratitudeNotes || '').length} max={LIMITS.gratitudeNotes} />
+              <AudioRecorderButton 
+                onTranscription={(text) => onResponseChange(entry.week, 'gratitudeNotes', (responses.gratitudeNotes || '') + (responses.gratitudeNotes ? ' ' : '') + text)}
+                onShowToast={onShowToast}
+              />
+            </div>
+          </div>
+          <textarea
+            id="gratitude-notes"
+            rows={5}
+            maxLength={LIMITS.gratitudeNotes}
+            className="w-full p-3.5 border border-input rounded-md shadow-sm focus:ring-amber-500 focus:border-amber-500 transition-colors duration-200 ease-in-out bg-card-secondary hover:bg-card text-main font-serif leading-relaxed"
+            placeholder="Record the specific, tangible moments you are grateful for this week... (e.g. A clear mind waking up, serenity during a tough phone call, renewed hope in prayer, finding patience with myself)"
+            aria-label="Your weekly gratitude notes and tangible blessings"
+            value={responses.gratitudeNotes || ''}
+            onChange={(e) => onResponseChange(entry.week, 'gratitudeNotes', e.target.value)}
+          />
+        </InfoCard>
+
         <InfoCard 
           title="Weekly Prayer" 
           icon={<HandIcon />}
           action={
-            <div className="flex items-center space-x-1">
+            <div className="flex items-center space-x-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenShare('prayer')}
+                  className="flex items-center text-xs font-medium text-muted hover:text-primary transition-colors px-2 py-1 rounded hover:bg-card-secondary"
+                  title="Share this prayer to community and socials"
+                  aria-label="Share prayer"
+                >
+                  <ShareMiniIcon />
+                  <span className="ml-1 hidden sm:inline">Share Prayer</span>
+                </button>
                 <TextToSpeechButton textToSpeak={entry.prayer} onShowToast={onShowToast} />
             </div>
           }
@@ -870,6 +896,31 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
             </div>
         </InfoCard>
 
+        {/* Share to Community & Socials Card */}
+        <div className="bg-card p-5 rounded-xl border border-primary/30 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
+          <div className="flex items-center space-x-3 text-center sm:text-left">
+            <div className="p-2.5 bg-primary-light text-primary rounded-lg">
+              <ShareIcon />
+            </div>
+            <div>
+              <h4 className="text-sm font-bold text-main">
+                Share Reflection to Community & Socials
+              </h4>
+              <p className="text-xs text-muted">
+                Export a summary or specific reflection via your device's native share sheet or directly to WhatsApp, X, Facebook, and LinkedIn.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={() => handleOpenShare('summary')}
+            className="w-full sm:w-auto px-4 py-2 bg-primary text-on-primary hover:bg-primary-hover rounded-lg font-semibold text-xs sm:text-sm shadow transition-all flex items-center justify-center space-x-2"
+            title="Open community share modal"
+          >
+            <ShareIcon />
+            <span>Share to Community</span>
+          </button>
+        </div>
+
         {/* Quick Week PDF Export Card */}
         <div className="bg-card p-5 rounded-xl border border-[#D4AF37]/30 shadow-md flex flex-col sm:flex-row items-center justify-between gap-4 no-print">
           <div className="flex items-center space-x-3 text-center sm:text-left">
@@ -906,7 +957,7 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
             )}
           </button>
         </div>
-        
+
         <GuidedMeditation entry={entry} onShowToast={onShowToast} />
 
         {entry.songTitle && (
@@ -930,6 +981,20 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
           allThemes={allThemes}
           allResponses={allResponses}
           allImages={allImages}
+          user={user}
+        />
+      )}
+
+      {entry && (
+        <ShareCommunityModal
+          isOpen={isShareModalOpen}
+          onClose={() => setShareModalOpen(false)}
+          entry={entry}
+          responses={responses}
+          initialContentType={shareContentType}
+          user={user}
+          customPrayer={personalizedPrayer}
+          onShowToast={onShowToast}
         />
       )}
     </>

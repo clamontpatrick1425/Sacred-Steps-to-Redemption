@@ -9,10 +9,15 @@ export default defineConfig(({ mode }) => {
         port: 3000,
         host: '0.0.0.0',
       },
+      preview: {
+        port: process.env.PORT ? parseInt(process.env.PORT) : 3000,
+        host: '0.0.0.0',
+      },
       plugins: [react()],
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
+        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY),
+        'process.env.MURF_API_KEY': JSON.stringify(env.MURF_API_KEY || 'ap2_de06251f-5bb6-4e8d-befa-4f0cf61b0c39'),
       },
       resolve: {
         alias: {

@@ -35,6 +35,7 @@ export interface JournalResponses {
   deeperReflectionResponse?: string;
   personalGoal?: string;
   goalReflection?: string;
+  gratitudeNotes?: string;
 }
 
 export type SavedEntries = {
@@ -47,6 +48,28 @@ export type SavedLyrics = {
 
 export type SavedPodcasts = {
   [week: number]: string;
+};
+
+export interface WeeklyPodcastData {
+  week: number;
+  title: string;
+  script: string;
+  summary: string;
+  audioBase64: string;
+  audioUrl?: string;
+  audioVoiceId?: string;
+  audioVoiceName?: string;
+  audioProvider?: 'murf' | 'gemini' | 'speech_synthesis';
+  wordCount?: number;
+  webInsightSnippet?: string;
+  webSources?: { title: string; uri: string }[];
+  searchQueries?: string[];
+  duration?: number;
+  generatedAt?: string;
+}
+
+export type SavedPodcastMetadata = {
+  [week: number]: WeeklyPodcastData;
 };
 
 export type UndoAction = {

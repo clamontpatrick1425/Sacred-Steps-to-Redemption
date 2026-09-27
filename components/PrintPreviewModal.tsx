@@ -3,7 +3,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import type { WeeklyTheme, JournalResponses, SavedEntries } from '../types';
 import { generateReflectionSummary } from '../services/geminiService';
 import { BrandLogo } from './BrandLogo';
-import { exportCompletedJournalToPDF, exportCurrentWeekToPDFWithCanvas } from '../utils/pdfExport';
+import { exportCompletedJournalToPDF, exportCurrentWeekToPDF, exportCurrentWeekToPDFWithCanvas } from '../utils/pdfExport';
 
 interface PrintPreviewModalProps {
   isOpen: boolean;
@@ -14,6 +14,7 @@ interface PrintPreviewModalProps {
   allThemes: WeeklyTheme[];
   allResponses: SavedEntries;
   allImages: { [week: number]: string };
+  user?: { name?: string; email?: string } | null;
 }
 
 type ExportMode = 'current' | 'full';
@@ -31,7 +32,7 @@ const DownloadIcon = () => (
 );
 
 
-export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({ isOpen, onClose, entry, responses, imageUrl, allThemes, allResponses, allImages }) => {
+export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({ isOpen, onClose, entry, responses, imageUrl, allThemes, allResponses, allImages, user }) => {
   const [isExporting, setIsExporting] = useState(false);
   const printContentRef = useRef<HTMLDivElement>(null);
   const [summary, setSummary] = useState<string | null>(null);
@@ -48,7 +49,9 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({ isOpen, on
         (resp.promptResponse && resp.promptResponse.trim() !== '') ||
         (resp.reflection1Response && resp.reflection1Response.trim() !== '') ||
         (resp.reflection2Response && resp.reflection2Response.trim() !== '') ||
-        (resp.personalGoal && resp.personalGoal.trim() !== '')
+        (resp.personalGoal && resp.personalGoal.trim() !== '') ||
+        (resp.gratitudeNotes && resp.gratitudeNotes.trim() !== '') ||
+        (resp.deeperReflectionResponse && resp.deeperReflectionResponse.trim() !== '')
       );
     });
   }, [exportMode, entry, allThemes, allResponses]);
@@ -66,12 +69,12 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({ isOpen, on
     setIsExporting(true);
     try {
       if (exportMode === 'current') {
-        const result = await exportCurrentWeekToPDFWithCanvas({
+        const result = exportCurrentWeekToPDF({
           entry,
           responses,
           imageUrl,
           summary,
-          targetElement: printContentRef.current,
+          user,
         });
 
         if (!result.success) {
@@ -90,6 +93,7 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({ isOpen, on
         };
 
         const result = exportCompletedJournalToPDF({
+          user: user ? { name: user.name || 'Fellow Pilgrim' } : null,
           savedEntries: mergedResponses,
           themes: allThemes,
         });
@@ -284,6 +288,27 @@ export const PrintPreviewModal: React.FC<PrintPreviewModalProps> = ({ isOpen, on
                               </div>
                           </div>
                       </div>
+                  </div>
+
+                  {resp.deeperReflectionResponse && (
+                    <div className="border border-indigo-200 rounded-lg p-6 bg-indigo-50/40">
+                      <h3 className="font-cinzel text-lg font-semibold text-indigo-950 mb-2">Deepened Examination &amp; Spiritual Insight</h3>
+                      <div className="bg-white p-4 rounded-md border border-indigo-100">
+                        <p className="whitespace-pre-wrap text-slate-800 font-serif leading-relaxed">{resp.deeperReflectionResponse}</p>
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="border border-amber-200 rounded-lg p-6 bg-amber-50/50">
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-cinzel text-lg font-semibold text-[#1C2A39]">💛 Weekly Gratitude Notes &amp; Tangible Blessings</h3>
+                      <span className="text-[10px] font-bold text-amber-800 uppercase tracking-wider bg-amber-100 px-2 py-0.5 rounded">Tangible Record</span>
+                    </div>
+                    <div className="bg-[#FFFDF7] p-4 rounded-md border border-amber-200/80">
+                      <p className="whitespace-pre-wrap text-slate-800 font-serif leading-relaxed">
+                        {resp.gratitudeNotes && resp.gratitudeNotes.trim() ? resp.gratitudeNotes : 'No gratitude notes entered for this week.'}
+                      </p>
+                    </div>
                   </div>
 
                   <div className="border border-slate-200 rounded-lg p-6 bg-slate-50/50">

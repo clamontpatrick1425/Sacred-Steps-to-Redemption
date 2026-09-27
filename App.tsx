@@ -1,7 +1,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { generateJournalContent, generateReflectiveImage, generateSongLyrics, generatePodcastScript, generateSpeech, getFallbackRecoveryImage, getFallbackDevotionalLyrics } from './services/geminiService';
-import type { WeeklyTheme, SavedEntries, JournalResponses, UndoAction, GratitudeEntry, ToastMessage, AppTheme, AppFontSize, SavedLyrics, SavedPodcasts } from './types';
+import { generateJournalContent, generateReflectiveImage, generateSongLyrics, generatePodcastScript, generateWeeklyPodcastWithWebScan, generateSpeech, getFallbackRecoveryImage, getFallbackDevotionalLyrics } from './services/geminiService';
+import type { WeeklyTheme, SavedEntries, JournalResponses, UndoAction, GratitudeEntry, ToastMessage, AppTheme, AppFontSize, SavedLyrics, SavedPodcasts, WeeklyPodcastData } from './types';
 import { Header } from './components/Header';
 import { JournalEntry } from './components/JournalEntry';
 import { LoadingSpinner } from './components/LoadingSpinner';
@@ -32,7 +32,7 @@ import { RecoverySEOFAQSection } from './components/RecoverySEOFAQSection';
 import { LegalModal, type LegalTab } from './components/LegalModal';
 import { auth, onAuthStateChanged, signOut } from './firebase';
 import { syncJournalEntries, syncUserProfile, saveJournalDocToCloud } from './utils/syncHelper';
-import { getAllPodcasts, savePodcast } from './utils/podcastDb';
+import { getAllPodcasts, savePodcast, savePodcastMetadata, deletePodcast, isDummyToneAudio } from './utils/podcastDb';
 
 import { BrandLogo } from './components/BrandLogo';
 
@@ -364,7 +364,17 @@ const App: React.FC = () => {
 
         const loadedPodcasts = await getAllPodcasts();
         if (active) {
-          setSavedPodcasts(loadedPodcasts);
+          const cleanPodcasts: { [week: number]: string } = {};
+          for (const weekStr in loadedPodcasts) {
+            const w = Number(weekStr);
+            const audioData = loadedPodcasts[w];
+            if (audioData && !isDummyToneAudio(audioData, undefined, 'speech_synthesis')) {
+              cleanPodcasts[w] = audioData;
+            } else {
+              deletePodcast(w);
+            }
+          }
+          setSavedPodcasts(cleanPodcasts);
         }
       } catch (err) {
         console.error("Exception in initPodcastsStore IndexedDB:", err);
@@ -715,23 +725,52 @@ const App: React.FC = () => {
     }
   };
 
-  const handleGeneratePodcast = async (week: number, theme: WeeklyTheme) => {
-    if (savedPodcasts[week]) {
-        showToast("Podcast has already been generated for this week.", "info");
-        return;
-    }
+  const handleGeneratePodcast = async (
+    week: number,
+    theme: WeeklyTheme,
+    responses?: Partial<JournalResponses>
+  ) => {
     setIsGeneratingPodcastForWeek(week);
     try {
-        const script = await generatePodcastScript(theme);
-        const audio = await generateSpeech(script);
-        await savePodcast(week, audio);
-        setSavedPodcasts(prev => ({ ...prev, [week]: audio }));
-        showToast("Your weekly podcast is ready!", "success");
+      const activeResponses = responses || savedEntries[week];
+      const result = await generateWeeklyPodcastWithWebScan(theme, activeResponses);
+
+      const isTone = isDummyToneAudio(result.audioBase64, result.duration, result.audioProvider);
+      const cleanAudio = isTone ? '' : result.audioBase64;
+      const cleanProvider = isTone ? 'speech_synthesis' : result.audioProvider;
+
+      const newMeta: WeeklyPodcastData = {
+        week,
+        title: result.title,
+        script: result.script,
+        summary: result.summary,
+        audioBase64: cleanAudio,
+        audioUrl: result.audioUrl,
+        audioProvider: cleanProvider,
+        audioVoiceId: result.audioVoiceId,
+        audioVoiceName: result.audioVoiceName,
+        wordCount: result.wordCount,
+        webInsightSnippet: result.webInsightSnippet,
+        webSources: result.webSources,
+        searchQueries: result.searchQueries,
+        duration: result.duration || 240,
+        generatedAt: new Date().toISOString(),
+      };
+
+      if (cleanAudio) {
+        await savePodcast(week, cleanAudio);
+      } else {
+        await deletePodcast(week);
+      }
+      await savePodcastMetadata(week, newMeta);
+      setSavedPodcasts(prev => ({ ...prev, [week]: cleanAudio }));
+      showToast(`Your Week ${week} podcast is ready!`, "success");
+      return newMeta;
     } catch (err) {
-        const message = err instanceof Error ? err.message : "An unknown error occurred.";
-        showToast(message, 'error');
+      const message = err instanceof Error ? err.message : "An unknown error occurred.";
+      showToast(message, 'error');
     } finally {
-        setIsGeneratingPodcastForWeek(null);
+      setIsGeneratingPodcastForWeek(null);
     }
   };
 
@@ -966,6 +1005,7 @@ const App: React.FC = () => {
                   allThemes={themes}
                   allResponses={savedEntries}
                   allImages={generatedImages}
+                  user={user}
                 />
                </>
              )}

@@ -33,6 +33,482 @@ function escapeHTML(str: string): string {
 }
 
 /**
+ * Exports the current week's journal responses directly to a beautifully formatted PDF document
+ * using the jsPDF library, with clean typography, theme title, scripture, personal reflections,
+ * gratitude notes, and closing prayer.
+ */
+export function exportCurrentWeekToPDF({
+  entry,
+  responses = {},
+  imageUrl,
+  summary,
+  user,
+}: CurrentWeekPDFExportOptions): { success: boolean; fileName: string; error?: string } {
+  try {
+    const pilgrimName = user?.name?.trim() ? user.name.trim() : 'Fellow Pilgrim';
+    const exportDateStr = new Date().toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+    });
+
+    const cleanName = pilgrimName.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const fileName = `Sacred_Steps_Week_${entry.week}_${cleanName}.pdf`;
+
+    // 1. Initialize jsPDF in Letter portrait format
+    const doc = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: 'letter',
+    });
+
+    const pageWidth = doc.internal.pageSize.getWidth(); // 612 pt
+    const pageHeight = doc.internal.pageSize.getHeight(); // 792 pt
+    const margin = 40; // 40 pt margins
+    const contentWidth = pageWidth - margin * 2; // 532 pt
+    const footerReservedHeight = 44;
+
+    let currentY = margin;
+
+    // Helper: Ensure enough space on current page, or create a new page
+    const ensureSpace = (neededHeight: number) => {
+      if (currentY + neededHeight > pageHeight - footerReservedHeight) {
+        doc.addPage();
+        currentY = margin + 24; // Leave room for top running header on subsequent pages
+      }
+    };
+
+    // Helper: Draw a wrapped block with title, formatted content card, and border
+    const printWrappedBlock = (
+      title: string,
+      content: string,
+      options: {
+        isPlaceholder?: boolean;
+        titleColor?: [number, number, number];
+        boxFill?: [number, number, number];
+        borderColor?: [number, number, number];
+        textColor?: [number, number, number];
+      } = {}
+    ) => {
+      const {
+        isPlaceholder = false,
+        titleColor = [15, 23, 42],
+        boxFill = [248, 250, 252],
+        borderColor = [226, 232, 240],
+        textColor = [30, 41, 59],
+      } = options;
+
+      ensureSpace(22);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(titleColor[0], titleColor[1], titleColor[2]);
+      doc.text(title, margin, currentY);
+      currentY += 13;
+
+      doc.setFont('helvetica', isPlaceholder ? 'italic' : 'normal');
+      doc.setFontSize(9.5);
+      if (isPlaceholder) {
+        doc.setTextColor(148, 163, 184); // Slate 400
+      } else {
+        doc.setTextColor(textColor[0], textColor[1], textColor[2]);
+      }
+
+      const textLines = doc.splitTextToSize(content, contentWidth - 20);
+      const boxHeight = textLines.length * 13.5 + 14;
+
+      ensureSpace(boxHeight + 8);
+
+      // Card background and subtle border
+      doc.setFillColor(boxFill[0], boxFill[1], boxFill[2]);
+      doc.setDrawColor(borderColor[0], borderColor[1], borderColor[2]);
+      doc.setLineWidth(0.75);
+      doc.roundedRect(margin, currentY, contentWidth, boxHeight, 4, 4, 'FD');
+
+      doc.text(textLines, margin + 10, currentY + 14);
+      currentY += boxHeight + 12;
+    };
+
+    // ==========================================
+    // DOCUMENT HEADER & BANNER
+    // ==========================================
+    // Top Accent Bar (Amber / Gold)
+    doc.setFillColor(180, 83, 9);
+    doc.rect(margin, currentY, contentWidth, 4, 'F');
+    currentY += 14;
+
+    // Main App Title
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(16);
+    doc.setTextColor(28, 42, 57);
+    doc.text('SACRED STEPS TO REDEMPTION: THE YEAR OF GRACE', margin, currentY);
+    currentY += 16;
+
+    // Subtitle
+    doc.setFont('helvetica', 'italic');
+    doc.setFontSize(10);
+    doc.setTextColor(100, 116, 139);
+    doc.text('A 52-Week Recovery Journal of Reflection, Gratitude & Prayer', margin, currentY);
+    currentY += 13;
+
+    // Publisher & Authorship Attribution
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(8.5);
+    doc.setTextColor(148, 163, 184);
+    doc.text('Authored by C. Lamont Patrick • Published by Kya Daisy Publishing (Copyright © 2025)', margin, currentY);
+    currentY += 14;
+
+    // Pilgrim Metadata Bar
+    doc.setFillColor(248, 250, 252);
+    doc.setDrawColor(226, 232, 240);
+    doc.setLineWidth(0.75);
+    doc.roundedRect(margin, currentY, contentWidth, 26, 4, 4, 'FD');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(8.5);
+    doc.setTextColor(30, 41, 59);
+    doc.text('PILGRIM:', margin + 10, currentY + 17);
+    doc.setFont('helvetica', 'normal');
+    doc.text(pilgrimName, margin + 55, currentY + 17);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('DATE:', margin + 210, currentY + 17);
+    doc.setFont('helvetica', 'normal');
+    doc.text(exportDateStr, margin + 242, currentY + 17);
+
+    doc.setFont('helvetica', 'bold');
+    doc.text('WEEK:', margin + 390, currentY + 17);
+    doc.setFont('helvetica', 'normal');
+    doc.text(`Week ${entry.week} of 52`, margin + 425, currentY + 17);
+
+    currentY += 36;
+
+    // ==========================================
+    // WEEK FOCUS THEME BANNER
+    // ==========================================
+    doc.setFillColor(254, 252, 232); // amber-50
+    doc.setDrawColor(212, 175, 55); // Gold border
+    doc.setLineWidth(1);
+
+    const themeHeaderLabel = `WEEK ${entry.week} FOCUS THEME: ${entry.theme.toUpperCase()}`;
+    const explanationLines = doc.splitTextToSize(entry.explanation || '', contentWidth - 24);
+    const themeCardHeight = 26 + explanationLines.length * 13 + 12;
+
+    ensureSpace(themeCardHeight + 10);
+    doc.roundedRect(margin, currentY, contentWidth, themeCardHeight, 5, 5, 'FD');
+
+    // Amber top accent inside card
+    doc.setFillColor(180, 83, 9);
+    doc.rect(margin + 1, currentY + 1, contentWidth - 2, 3, 'F');
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(28, 42, 57);
+    doc.text(themeHeaderLabel, margin + 12, currentY + 20);
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(71, 85, 105);
+    doc.text(explanationLines, margin + 12, currentY + 34);
+
+    currentY += themeCardHeight + 14;
+
+    // ==========================================
+    // SCRIPTURE ANCHOR & INSPIRATIONAL QUOTE
+    // ==========================================
+    if (entry.bibleVerse && entry.bibleVerseText) {
+      ensureSpace(50);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(180, 83, 9); // Amber
+      doc.text(`SCRIPTURAL FOUNDATION (${entry.bibleVerse}):`, margin, currentY);
+      currentY += 12;
+
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9);
+      doc.setTextColor(51, 65, 85);
+      const scriptureLines = doc.splitTextToSize(`"${entry.bibleVerseText}"`, contentWidth - 16);
+      const scriptureHeight = scriptureLines.length * 12 + 10;
+      ensureSpace(scriptureHeight + 6);
+
+      doc.setFillColor(253, 251, 247);
+      doc.setDrawColor(241, 229, 209);
+      doc.roundedRect(margin, currentY, contentWidth, scriptureHeight, 4, 4, 'FD');
+      // Left vertical accent bar
+      doc.setFillColor(212, 175, 55);
+      doc.rect(margin, currentY, 3.5, scriptureHeight, 'F');
+
+      doc.text(scriptureLines, margin + 10, currentY + 12);
+      currentY += scriptureHeight + 10;
+    }
+
+    if (entry.quote && entry.quote.text) {
+      ensureSpace(45);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9);
+      doc.setTextColor(45, 90, 56); // Deep Green
+      doc.text('INSPIRATIONAL QUOTE:', margin, currentY);
+      currentY += 12;
+
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9);
+      doc.setTextColor(51, 65, 85);
+      const quoteString = `"${entry.quote.text}" — ${entry.quote.author || 'Anonymous'}`;
+      const quoteLines = doc.splitTextToSize(quoteString, contentWidth - 16);
+      const quoteHeight = quoteLines.length * 12 + 10;
+      ensureSpace(quoteHeight + 6);
+
+      doc.setFillColor(247, 250, 248);
+      doc.setDrawColor(220, 231, 222);
+      doc.roundedRect(margin, currentY, contentWidth, quoteHeight, 4, 4, 'FD');
+      // Left vertical accent bar
+      doc.setFillColor(122, 139, 123);
+      doc.rect(margin, currentY, 3.5, quoteHeight, 'F');
+
+      doc.text(quoteLines, margin + 10, currentY + 12);
+      currentY += quoteHeight + 12;
+    }
+
+    // AI Spiritual Reflection Summary (if present)
+    if (summary && summary.trim().length > 0) {
+      ensureSpace(50);
+      printWrappedBlock('AI SPIRITUAL REFLECTION SUMMARY:', summary.trim(), {
+        titleColor: [180, 83, 9],
+        boxFill: [255, 251, 235],
+        borderColor: [253, 230, 138],
+        textColor: [30, 41, 59],
+      });
+    }
+
+    // ==========================================
+    // PERSONAL JOURNAL REFLECTIONS SECTION
+    // ==========================================
+    ensureSpace(35);
+    doc.setDrawColor(203, 213, 225);
+    doc.setLineWidth(0.75);
+    doc.line(margin, currentY, margin + contentWidth, currentY);
+    currentY += 14;
+
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(10.5);
+    doc.setTextColor(15, 23, 42);
+    doc.text('MY WRITTEN JOURNAL REFLECTIONS & STEP WORK', margin, currentY);
+    currentY += 16;
+
+    // Check if user has answered any prompts
+    const hasAnyResponse =
+      Boolean(responses.promptResponse?.trim()) ||
+      Boolean(responses.reflection1Response?.trim()) ||
+      Boolean(responses.reflection2Response?.trim()) ||
+      Boolean(responses.personalGoal?.trim()) ||
+      Boolean(responses.goalReflection?.trim()) ||
+      Boolean(responses.deeperReflectionResponse?.trim()) ||
+      Boolean(responses.gratitudeNotes?.trim());
+
+    if (!hasAnyResponse) {
+      ensureSpace(36);
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(226, 232, 240);
+      doc.roundedRect(margin, currentY, contentWidth, 28, 4, 4, 'FD');
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9);
+      doc.setTextColor(100, 116, 139);
+      doc.text(
+        'Note: No written responses have been recorded yet for this week. Use the prompts below during reflection or step work.',
+        margin + 10,
+        currentY + 17
+      );
+      currentY += 38;
+    }
+
+    // 1. Primary Reflection Prompt & Personal Reflection
+    if (entry.prompt) {
+      const promptLabel = `Primary Reflection Prompt: "${entry.prompt}"`;
+      const promptAnswer = responses.promptResponse?.trim();
+      printWrappedBlock(
+        promptLabel,
+        promptAnswer || 'No response recorded yet for this prompt.',
+        {
+          isPlaceholder: !promptAnswer,
+          titleColor: [15, 23, 42],
+          boxFill: [253, 251, 247],
+          borderColor: [226, 232, 240],
+        }
+      );
+    }
+
+    // 2. Reflection Question 1 & Personal Reflection
+    if (entry.reflectionQuestion1) {
+      const q1Label = `Reflection Question 1: "${entry.reflectionQuestion1}"`;
+      const q1Answer = responses.reflection1Response?.trim();
+      printWrappedBlock(
+        q1Label,
+        q1Answer || 'No response recorded yet for this question.',
+        {
+          isPlaceholder: !q1Answer,
+          titleColor: [15, 23, 42],
+          boxFill: [253, 251, 247],
+          borderColor: [226, 232, 240],
+        }
+      );
+    }
+
+    // 3. Reflection Question 2 & Personal Reflection
+    if (entry.reflectionQuestion2) {
+      const q2Label = `Reflection Question 2: "${entry.reflectionQuestion2}"`;
+      const q2Answer = responses.reflection2Response?.trim();
+      printWrappedBlock(
+        q2Label,
+        q2Answer || 'No response recorded yet for this question.',
+        {
+          isPlaceholder: !q2Answer,
+          titleColor: [15, 23, 42],
+          boxFill: [253, 251, 247],
+          borderColor: [226, 232, 240],
+        }
+      );
+    }
+
+    // 4. Personal Action Goal / Step Committed (if present)
+    if (responses.personalGoal?.trim()) {
+      printWrappedBlock(
+        'Personal Action Step / Goal Committed:',
+        responses.personalGoal.trim(),
+        {
+          titleColor: [4, 120, 87], // Green
+          boxFill: [240, 253, 244],
+          borderColor: [187, 247, 208],
+          textColor: [20, 83, 45],
+        }
+      );
+    }
+
+    // 5. Goal Reflection (if present)
+    if (responses.goalReflection?.trim()) {
+      printWrappedBlock(
+        'Goal Progress & Accountability Reflection:',
+        responses.goalReflection.trim(),
+        {
+          titleColor: [4, 120, 87],
+          boxFill: [240, 253, 244],
+          borderColor: [187, 247, 208],
+          textColor: [20, 83, 45],
+        }
+      );
+    }
+
+    // 6. Deepened Examination & Spiritual Insight (if present)
+    if (responses.deeperReflectionResponse?.trim()) {
+      printWrappedBlock(
+        'Deepened Examination & Spiritual Insight:',
+        responses.deeperReflectionResponse.trim(),
+        {
+          titleColor: [67, 56, 202], // Indigo
+          boxFill: [238, 242, 255],
+          borderColor: [199, 210, 254],
+          textColor: [49, 46, 129],
+        }
+      );
+    }
+
+    // 7. Weekly Gratitude Notes & Blessings
+    const gratitudeAnswer = responses.gratitudeNotes?.trim();
+    printWrappedBlock(
+      'Weekly Gratitude Notes & Tangible Blessings:',
+      gratitudeAnswer || 'No gratitude notes recorded yet for this week.',
+      {
+        isPlaceholder: !gratitudeAnswer,
+        titleColor: [146, 64, 14], // Amber-800
+        boxFill: [254, 253, 248],
+        borderColor: [243, 232, 199],
+        textColor: [30, 41, 59],
+      }
+    );
+
+    // 8. Weekly Closing Prayer
+    if (entry.prayer) {
+      ensureSpace(60);
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(9.5);
+      doc.setTextColor(180, 83, 9);
+      doc.text('WEEKLY CLOSING PRAYER:', margin, currentY);
+      currentY += 13;
+
+      doc.setFont('helvetica', 'italic');
+      doc.setFontSize(9.5);
+      doc.setTextColor(51, 65, 85);
+      const prayerLines = doc.splitTextToSize(`"${entry.prayer}"`, contentWidth - 20);
+      const prayerHeight = prayerLines.length * 13.5 + 14;
+
+      ensureSpace(prayerHeight + 8);
+      doc.setFillColor(255, 253, 245);
+      doc.setDrawColor(253, 230, 138);
+      doc.setLineWidth(0.75);
+      doc.roundedRect(margin, currentY, contentWidth, prayerHeight, 4, 4, 'FD');
+
+      // Top amber highlight
+      doc.setFillColor(212, 175, 55);
+      doc.rect(margin + 1, currentY + 1, contentWidth - 2, 2.5, 'F');
+
+      doc.text(prayerLines, margin + 10, currentY + 14);
+      currentY += prayerHeight + 12;
+    }
+
+    // ==========================================
+    // RUNNING HEADERS & FOOTERS ON ALL PAGES
+    // ==========================================
+    const totalPages = doc.getNumberOfPages();
+
+    for (let p = 1; p <= totalPages; p++) {
+      doc.setPage(p);
+
+      // Running top header for pages 2+
+      if (p > 1) {
+        doc.setFont('helvetica', 'normal');
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text(
+          `SACRED STEPS TO REDEMPTION • WEEK ${entry.week}: ${entry.theme.toUpperCase()}`,
+          margin,
+          margin - 10
+        );
+        doc.text(pilgrimName, pageWidth - margin, margin - 10, { align: 'right' });
+
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.5);
+        doc.line(margin, margin - 4, pageWidth - margin, margin - 4);
+      }
+
+      // Running bottom footer on all pages
+      const footerY = pageHeight - margin + 20;
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.5);
+      doc.line(margin, footerY - 10, pageWidth - margin, footerY - 10);
+
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(8);
+      doc.setTextColor(148, 163, 184);
+      doc.text(
+        'Sacred Steps to Redemption © Kya Daisy Publishing • Confidential Spiritual Recovery Journal',
+        margin,
+        footerY
+      );
+      doc.text(`Page ${p} of ${totalPages}`, pageWidth - margin, footerY, { align: 'right' });
+    }
+
+    // Save PDF file
+    doc.save(fileName);
+    return { success: true, fileName };
+  } catch (err) {
+    console.error('Direct jsPDF export error:', err);
+    return {
+      success: false,
+      fileName: `Sacred_Steps_Week_${entry.week}.pdf`,
+      error: err instanceof Error ? err.message : 'Failed to generate PDF document.',
+    };
+  }
+}
+
+/**
  * Exports the current week's journal responses into a formatted, high-resolution PDF document
  * using html2canvas to render pixel-perfect editorial typography and jsPDF to assemble multi-page Letter format.
  */
@@ -61,11 +537,12 @@ export async function exportCurrentWeekToPDFWithCanvas({
     // If no existing visible DOM element was passed, create a pristine styled container
     if (!elementToCapture) {
       createdOffscreenElement = document.createElement('div');
-      createdOffscreenElement.style.position = 'fixed';
-      createdOffscreenElement.style.left = '-9999px';
+      createdOffscreenElement.style.position = 'absolute';
+      createdOffscreenElement.style.left = '0';
       createdOffscreenElement.style.top = '0';
       createdOffscreenElement.style.width = '780px';
       createdOffscreenElement.style.zIndex = '-9999';
+      createdOffscreenElement.style.pointerEvents = 'none';
       createdOffscreenElement.style.backgroundColor = '#FFFFFF';
       createdOffscreenElement.style.color = '#1E293B';
       createdOffscreenElement.style.fontFamily = 'Georgia, Cambria, "Times New Roman", Times, serif';
@@ -115,6 +592,17 @@ export async function exportCurrentWeekToPDFWithCanvas({
             ${escapeHTML(entry.explanation)}
           </p>
         </div>
+
+        ${imageUrl ? `
+          <div style="text-align: center; margin-bottom: 20px;">
+            <img src="${imageUrl}" alt="Visual Meditation" crossOrigin="anonymous" style="max-height: 200px; max-width: 100%; border-radius: 8px; border: 1px solid #D4AF37; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1);" />
+            ${entry.imagePrompt ? `
+              <div style="font-size: 10px; color: #64748B; font-style: italic; margin-top: 4px;">
+                Visual Meditation: &ldquo;${escapeHTML(entry.imagePrompt)}&rdquo;
+              </div>
+            ` : ''}
+          </div>
+        ` : ''}
 
         <!-- Scripture Anchor & Quote -->
         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 22px;">
@@ -239,6 +727,21 @@ export async function exportCurrentWeekToPDFWithCanvas({
           ` : ''}
         </div>
 
+        <!-- Weekly Gratitude Notes & Tangible Blessings -->
+        <div style="background-color: #FEFDF8; border: 1.5px solid #F3E8C7; border-left: 4px solid #D4AF37; border-radius: 8px; padding: 16px 18px; margin-bottom: 22px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px;">
+            <div style="font-family: system-ui, -apple-system, sans-serif; font-size: 11px; font-weight: 800; color: #92400E; text-transform: uppercase; letter-spacing: 0.08em;">
+              💛 Weekly Gratitude Notes &amp; Tangible Blessings
+            </div>
+            <div style="font-size: 10px; color: #B45309; font-style: italic;">
+              Tangible Record of Grace &amp; Progress
+            </div>
+          </div>
+          <div style="background-color: #FFFFFF; border: 1px solid #EAE0CC; border-radius: 6px; padding: 12px 14px; font-family: Georgia, serif; font-size: 12.5px; line-height: 1.6; color: #1E293B; white-space: pre-wrap;">
+            ${responses.gratitudeNotes && responses.gratitudeNotes.trim() ? escapeHTML(responses.gratitudeNotes) : '<span style="color: #94A3B8; font-style: italic;">No specific gratitude notes recorded for this week.</span>'}
+          </div>
+        </div>
+
         <!-- Weekly Closing Prayer -->
         ${entry.prayer ? `
           <div style="background-color: #FFFDF5; border: 1px solid #FDE68A; border-top: 3px solid #D4AF37; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
@@ -269,6 +772,9 @@ export async function exportCurrentWeekToPDFWithCanvas({
       allowTaint: true,
       backgroundColor: '#FFFFFF',
       logging: false,
+      scrollX: 0,
+      scrollY: 0,
+      windowWidth: 850,
     });
 
     // 2. Initialize jsPDF in Letter format
@@ -353,16 +859,17 @@ export async function exportCurrentWeekToPDFWithCanvas({
     doc.save(fileName);
     return { success: true, fileName };
   } catch (err) {
-    console.error('Canvas PDF export error, falling back to vector PDF:', err);
-    // Graceful fallback to pure jsPDF vector export if html2canvas meets any browser limitation
+    console.error('Canvas PDF export error, falling back to direct jsPDF vector PDF:', err);
+    // Graceful fallback to direct jsPDF vector export if html2canvas meets any browser limitation
     try {
-      const fallbackResult = exportCompletedJournalToPDF({
-        user: user ? { name: user.name || 'Fellow Pilgrim' } : null,
-        savedEntries: { [entry.week]: responses },
-        themes: [entry],
-        targetWeek: entry.week,
+      const fallbackResult = exportCurrentWeekToPDF({
+        entry,
+        responses,
+        imageUrl,
+        summary,
+        user,
       });
-      return { success: fallbackResult.success, fileName: fallbackResult.fileName };
+      return fallbackResult;
     } catch (fallbackErr) {
       return {
         success: false,
@@ -623,6 +1130,11 @@ export function exportCompletedJournalToPDF({
     // 6. Deeper Reflection Response
     if (responses.deeperReflectionResponse && responses.deeperReflectionResponse.trim()) {
       printWrappedBlock('Deepened Examination & Spiritual Insight:', responses.deeperReflectionResponse, [79, 70, 229], [30, 41, 59]);
+    }
+
+    // 7. Weekly Gratitude Notes & Blessings
+    if (responses.gratitudeNotes && responses.gratitudeNotes.trim()) {
+      printWrappedBlock('Weekly Gratitude Notes & Blessings:', responses.gratitudeNotes, [180, 83, 9], [30, 41, 59]);
     }
 
     // Weekly Prayer Box (Closing devotion for the week)
