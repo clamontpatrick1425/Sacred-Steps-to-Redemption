@@ -45,6 +45,27 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
 
   if (!isOpen) return null;
 
+  const formatAuthError = (err: any): string => {
+    if (!err) return 'Authentication failed';
+    const msg = err.message || String(err);
+    if (err.code === 'auth/api-key-not-valid' || msg.includes('api-key-not-valid')) {
+      return 'Firebase Web API Key is invalid for this project. Please provide the apiKey (starts with AIzaSy...) and projectId from your Firebase Console (Project Settings > General > Web app).';
+    }
+    if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+      return 'Invalid email or password. Please verify your credentials or create an account.';
+    }
+    if (err.code === 'auth/email-already-in-use') {
+      return 'This email is already registered. Please sign in instead.';
+    }
+    if (err.code === 'auth/weak-password') {
+      return 'Password is too weak. Please use at least 6 characters.';
+    }
+    if (err.code === 'auth/popup-closed-by-user') {
+      return 'Sign-in popup was closed before completing.';
+    }
+    return msg;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
@@ -60,7 +81,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
       }
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Authentication failed');
+      setError(formatAuthError(err));
     } finally {
       setLoading(false);
     }
@@ -75,7 +96,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
         onLogin({ name: result.user.displayName || 'User', email: result.user.email || '' });
         onClose();
       } catch (err: any) {
-        setError(err.message || `${providerName} login failed`);
+        setError(formatAuthError(err));
       } finally {
         setLoading(false);
       }
