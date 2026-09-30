@@ -30,6 +30,7 @@ import { MeditationTimer } from './components/MeditationTimer';
 import { RedemptionDashboard } from './components/RedemptionDashboard';
 import { RecoverySEOFAQSection } from './components/RecoverySEOFAQSection';
 import { LegalModal, type LegalTab } from './components/LegalModal';
+import { PhonePreviewModal } from './components/PhonePreviewModal';
 import { auth, onAuthStateChanged, signOut } from './firebase';
 import { syncJournalEntries, syncUserProfile, saveJournalDocToCloud } from './utils/syncHelper';
 import { getAllPodcasts, savePodcast, savePodcastMetadata, deletePodcast, isDummyToneAudio } from './utils/podcastDb';
@@ -253,6 +254,7 @@ const App: React.FC = () => {
   const [isTriggerTrackerOpen, setIsTriggerTrackerOpen] = useState(false);
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
   const [legalModalTab, setLegalModalTab] = useState<LegalTab>('privacy');
+  const [isPhonePreviewOpen, setIsPhonePreviewOpen] = useState(false);
 
   const handleOpenLegalModal = (tab: LegalTab) => {
     setLegalModalTab(tab);
@@ -1033,6 +1035,9 @@ const App: React.FC = () => {
         onLogoutClick={handleLogout}
         onSOSClick={() => setIsSOSOpen(true)}
         onTriggerClick={() => setIsTriggerTrackerOpen(true)}
+        onOpenPhonePreview={() => setIsPhonePreviewOpen(true)}
+        onOpenPrivacy={() => handleOpenLegalModal('privacy')}
+        onOpenTerms={() => handleOpenLegalModal('terms')}
       />
       <div className="container mx-auto p-4 md:p-8">
         {renderContent()}
@@ -1124,6 +1129,25 @@ const App: React.FC = () => {
         isOpen={isLegalModalOpen}
         onClose={() => setIsLegalModalOpen(false)}
         initialTab={legalModalTab}
+      />
+      <PhonePreviewModal
+        isOpen={isPhonePreviewOpen}
+        onClose={() => setIsPhonePreviewOpen(false)}
+        currentWeek={currentWeek}
+        onWeekChange={handleWeekChange}
+        themes={themes}
+        savedEntries={savedEntries}
+        onResponseChange={handleResponseChange}
+        onShowToast={showToast}
+        user={user}
+        onSOSClick={() => {
+          setIsPhonePreviewOpen(false);
+          setIsSOSOpen(true);
+        }}
+        onTriggerClick={() => {
+          setIsPhonePreviewOpen(false);
+          setIsTriggerTrackerOpen(true);
+        }}
       />
       <SettingsModal 
         isOpen={isSettingsOpen}

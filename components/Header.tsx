@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { BrandLogo } from './BrandLogo';
 
 interface HeaderProps {
     onOpenSettings: () => void;
@@ -7,6 +8,9 @@ interface HeaderProps {
     onLogoutClick: () => void;
     onSOSClick: () => void;
     onTriggerClick: () => void;
+    onOpenPhonePreview?: () => void;
+    onOpenPrivacy?: () => void;
+    onOpenTerms?: () => void;
 }
 
 const SettingsIcon = () => (
@@ -34,21 +38,107 @@ const TriggerIcon = () => (
     </svg>
 );
 
-export const Header: React.FC<HeaderProps> = ({ onOpenSettings, user, onLoginClick, onLogoutClick, onSOSClick, onTriggerClick }) => {
+const ShieldPrivacyIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#7A8B7B]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    </svg>
+);
+
+const ScalesTermsIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-[#AA8010]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6 2l3-1m-3 1l-3 9a5.002 5.002 0 006.001 0M18 7l3 9m-3-9l-6-2m0-2v2m0 16V5m0 16H9m3 0h3" />
+    </svg>
+);
+
+const PhoneIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-slate-700 dark:text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <rect x="6" y="2" width="12" height="20" rx="2.5" />
+        <line x1="11" y1="18" x2="13" y2="18" strokeLinecap="round" />
+    </svg>
+);
+
+export const Header: React.FC<HeaderProps> = ({
+  onOpenSettings,
+  user,
+  onLoginClick,
+  onLogoutClick,
+  onSOSClick,
+  onTriggerClick,
+  onOpenPhonePreview,
+  onOpenPrivacy,
+  onOpenTerms,
+}) => {
   const hour = new Date().getHours();
   let greeting = 'Good evening';
   if (hour < 12) greeting = 'Good morning';
   else if (hour < 18) greeting = 'Good afternoon';
 
+  const [isPlayingSound, setIsPlayingSound] = useState(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const toggleSound = () => {
+    try {
+      if (isPlayingSound) {
+        if (audioCtxRef.current) {
+          audioCtxRef.current.close().catch(() => {});
+          audioCtxRef.current = null;
+        }
+        setIsPlayingSound(false);
+      } else {
+        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+        const ctx = new AudioCtx();
+        audioCtxRef.current = ctx;
+
+        const gainNode = ctx.createGain();
+        gainNode.gain.setValueAtTime(0.06, ctx.currentTime);
+        gainNode.connect(ctx.destination);
+
+        // Peaceful prayer frequencies (432Hz & 540Hz)
+        [432, 540].forEach((freq, idx) => {
+          const osc = ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(freq, ctx.currentTime);
+          osc.connect(gainNode);
+          osc.start(ctx.currentTime + idx * 0.15);
+        });
+
+        setIsPlayingSound(true);
+      }
+    } catch {
+      setIsPlayingSound((prev) => !prev);
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (audioCtxRef.current) {
+        audioCtxRef.current.close().catch(() => {});
+      }
+    };
+  }, []);
+
   return (
-    <header className="relative pt-4 pb-6 px-4 sm:px-6 bg-card border-b border-default shadow-sm text-center">
-      {/* Top Navigation & Utility Bar */}
+    <header className="relative pt-3 pb-5 px-4 sm:px-6 bg-card border-b border-default shadow-xs text-center">
+      {/* Top Brand & Utility Navigation Bar */}
       <div className="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-3">
-        {/* Critical Crisis & Trigger Tools */}
-        <div className="flex items-center space-x-2">
+        {/* Left Side: Brand Logo & Title from reference design */}
+        <div className="flex items-center space-x-3 text-left">
+          <BrandLogo size={36} />
+          <div className="flex flex-col">
+            <span className="font-cinzel text-base sm:text-lg font-bold text-main tracking-wider leading-tight">
+              Steps Daily Grace
+            </span>
+            <span className="text-[9px] sm:text-[10px] uppercase tracking-widest text-[#D4AF37] font-bold">
+              SANCTUARY FOR RECOVERY
+            </span>
+          </div>
+        </div>
+
+        {/* Center/Actions: SOS & Daily Triggers */}
+        <div className="hidden md:flex items-center space-x-2">
           <button
             onClick={onSOSClick}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-red-600/10 text-red-700 dark:text-red-400 hover:bg-red-600/20 border border-red-300 dark:border-red-900/50 rounded-full font-semibold transition-all focus:outline-none focus:ring-2 ring-red-500 text-xs tracking-wide uppercase"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-red-600/10 text-red-700 dark:text-red-400 hover:bg-red-600/20 border border-red-300 dark:border-red-900/50 rounded-full font-semibold transition-all focus:outline-none focus:ring-2 ring-red-500 text-xs tracking-wide uppercase cursor-pointer"
             aria-label="SOS Crisis Support Suite"
           >
             <SOSIcon />
@@ -56,7 +146,7 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings, user, onLoginCli
           </button>
           <button
             onClick={onTriggerClick}
-            className="flex items-center space-x-1.5 px-3 py-1.5 bg-card-secondary text-main hover:border-[#7A8B7B] rounded-full font-medium transition-all focus:outline-none focus:ring-2 ring-[#7A8B7B] border border-default text-xs tracking-wide"
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-card-secondary text-main hover:border-[#7A8B7B] rounded-full font-medium transition-all focus:outline-none focus:ring-2 ring-[#7A8B7B] border border-default text-xs tracking-wide cursor-pointer"
             aria-label="Trigger Tracker"
           >
             <TriggerIcon />
@@ -64,51 +154,112 @@ export const Header: React.FC<HeaderProps> = ({ onOpenSettings, user, onLoginCli
           </button>
         </div>
 
-        {/* Right Side: Account & Settings */}
-        <div className="flex items-center space-x-2">
-            {user ? (
-              <div className="flex items-center space-x-2 bg-card-secondary px-3 py-1.5 rounded-full border border-default text-xs">
-                <span className="font-medium text-main hidden sm:inline-block">
-                  {greeting}, {user.name}
-                </span>
-                <button 
-                  onClick={onLogoutClick} 
-                  className="text-muted hover:text-red-500 transition-colors focus:outline-none font-medium ml-1"
-                  aria-label="Log out"
-                >
-                  Log out
-                </button>
-              </div>
-            ) : (
-              <button 
-                onClick={onLoginClick} 
-                className="flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold text-main bg-card-secondary hover:bg-primary-light border border-default rounded-full transition-all focus:outline-none focus:ring-2 ring-primary"
-                aria-label="Log in or Register"
-              >
-                <LoginIcon />
-                <span>Log In</span>
-              </button>
-            )}
-            <button 
-              onClick={onOpenSettings} 
-              className="p-2 text-muted hover:text-[#D4AF37] rounded-full hover:bg-card-secondary transition-colors focus:outline-none focus:ring-2 ring-[#D4AF37]"
-              aria-label="Open appearance and audio settings"
-              title="Appearance & Audio Settings"
+        {/* Right Side: Privacy, Terms, Sound, and PHONE PREVIEW button */}
+        <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap">
+          {/* Privacy Link */}
+          {onOpenPrivacy && (
+            <button
+              onClick={onOpenPrivacy}
+              className="flex items-center space-x-1.5 text-xs text-muted hover:text-main font-medium py-1 px-2 rounded-md hover:bg-card-secondary transition-colors cursor-pointer"
+              title="View Confidentiality & Privacy Policy"
             >
-              <SettingsIcon />
+              <ShieldPrivacyIcon />
+              <span>Privacy</span>
             </button>
-          </div>
+          )}
+
+          {/* Terms Link */}
+          {onOpenTerms && (
+            <button
+              onClick={onOpenTerms}
+              className="flex items-center space-x-1.5 text-xs text-muted hover:text-main font-medium py-1 px-2 rounded-md hover:bg-card-secondary transition-colors cursor-pointer"
+              title="View Terms &amp; Conditions"
+            >
+              <ScalesTermsIcon />
+              <span>Terms</span>
+            </button>
+          )}
+
+          {/* Sound / Ambient Audio Toggle */}
+          <button
+            onClick={toggleSound}
+            className={`p-1.5 rounded-full transition-colors focus:outline-none focus:ring-2 ring-primary cursor-pointer ${
+              isPlayingSound
+                ? 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-200 shadow-2xs'
+                : 'text-muted hover:text-main hover:bg-card-secondary'
+            }`}
+            aria-label={isPlayingSound ? 'Mute ambient prayer sound' : 'Play ambient prayer chime'}
+            title={isPlayingSound ? 'Mute ambient chime' : 'Play peaceful chime'}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              {isPlayingSound ? (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707C10.923 3.663 12 4.109 12 5v14c0 .891-1.077 1.337-1.707.707L5.586 15z" />
+              ) : (
+                <path strokeLinecap="round" strokeLinejoin="round" d="M11 5L6 9H2v6h4l5 4V5z m4.5 4a3 3 0 010 6m2.5-9a7 7 0 010 12" />
+              )}
+            </svg>
+          </button>
+
+          {/* [ 📱 Phone Preview ] Button matching user's design image */}
+          {onOpenPhonePreview && (
+            <button
+              id="header-phone-preview-btn"
+              onClick={onOpenPhonePreview}
+              className="flex items-center space-x-1.5 px-3 py-1.5 bg-card-secondary hover:bg-card text-main border border-default hover:border-[#D4AF37] rounded-full text-xs font-semibold shadow-2xs transition-all focus:outline-none focus:ring-2 ring-[#D4AF37] cursor-pointer hover:shadow-xs group"
+              aria-label="Open Phone Preview Simulator"
+              title="Preview Sacred Steps in Mobile Phone View"
+            >
+              <PhoneIcon />
+              <span className="group-hover:text-[#AA8010] transition-colors">Phone Preview</span>
+            </button>
+          )}
+
+          {/* User Account / Login */}
+          {user ? (
+            <div className="flex items-center space-x-2 bg-card-secondary px-2.5 py-1 rounded-full border border-default text-xs">
+              <span className="font-medium text-main hidden lg:inline-block">
+                {greeting}, {user.name}
+              </span>
+              <button 
+                onClick={onLogoutClick} 
+                className="text-muted hover:text-red-500 transition-colors focus:outline-none font-medium ml-1 cursor-pointer"
+                aria-label="Log out"
+              >
+                Log out
+              </button>
+            </div>
+          ) : (
+            <button 
+              onClick={onLoginClick} 
+              className="flex items-center space-x-1.5 px-2.5 py-1 text-xs font-semibold text-main bg-card-secondary hover:bg-primary-light border border-default rounded-full transition-all focus:outline-none focus:ring-2 ring-primary cursor-pointer"
+              aria-label="Log in or Register"
+            >
+              <LoginIcon />
+              <span>Log In</span>
+            </button>
+          )}
+
+          {/* Settings */}
+          <button 
+            onClick={onOpenSettings} 
+            className="p-1.5 text-muted hover:text-[#D4AF37] rounded-full hover:bg-card-secondary transition-colors focus:outline-none focus:ring-2 ring-[#D4AF37] cursor-pointer"
+            aria-label="Open appearance and audio settings"
+            title="Appearance & Audio Settings"
+          >
+            <SettingsIcon />
+          </button>
         </div>
+      </div>
 
       {/* Main Editorial Header Typography */}
-      <div className="mt-6 pt-5 border-t border-default/40 max-w-3xl mx-auto flex flex-col items-center text-center">
-        <h1 className="font-cinzel text-2xl sm:text-3xl md:text-4xl font-extrabold text-main tracking-wider leading-tight">
+      <div className="mt-5 pt-4 border-t border-default/40 max-w-3xl mx-auto flex flex-col items-center text-center">
+        <h1 className="font-cinzel text-xl sm:text-2xl md:text-3xl font-extrabold text-main tracking-wider leading-tight">
           Sacred Steps to Redemption: The Year of Grace
         </h1>
-        <p className="mt-2 text-xs sm:text-sm text-muted font-sans font-medium tracking-wide">
+        <p className="mt-1 text-xs sm:text-sm text-muted font-sans font-medium tracking-wide">
           A 52-Week Recovery Journal of Reflection, Gratitude &amp; Prayer
         </p>
-        <p className="mt-3 text-xs sm:text-sm text-primary font-serif-quote italic font-medium">
+        <p className="mt-2 text-xs sm:text-sm text-primary font-serif-quote italic font-medium">
           &ldquo;A Path to Recovery, A Life in Grace.&rdquo; &bull; &ldquo;Sustained Walking, Daily Freedom.&rdquo;
         </p>
       </div>

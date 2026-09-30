@@ -353,6 +353,31 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
   return (
     <>
       <div className="space-y-6 animate-fade-in">
+        {/* Editorial Section Header from Reference Design */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-default/40">
+          <div>
+            <h2 className="font-cinzel text-xl sm:text-2xl font-bold text-main tracking-wide leading-tight">
+              Interactive 12-Step Journal
+            </h2>
+            <p className="text-xs text-muted font-serif-quote italic mt-0.5">
+              &ldquo;Sacred Steps to Redemption: A Year of Addiction Recovery&rdquo; by C. Lamont Patrick (Kya Daisy Publishing)
+            </p>
+          </div>
+          <div className="flex items-center space-x-2 shrink-0">
+            <button
+              onClick={() => setPrintModalOpen(true)}
+              className="no-print flex items-center space-x-2 bg-[#1C2A39] hover:bg-[#283E52] text-[#F5D77F] px-4 py-2 rounded-xl text-xs font-bold transition-all shadow-sm border border-[#D4AF37]/40 cursor-pointer"
+              title="Convert to PDF / Print Journal"
+            >
+              <DocumentPdfIcon />
+              <span>Convert to PDF / Print</span>
+              <svg className="w-3.5 h-3.5 text-[#F5D77F]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
         <div className="flex justify-end items-center space-x-2 flex-wrap gap-y-2">
            <button
             onClick={onToggleFocusMode}
