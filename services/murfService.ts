@@ -95,7 +95,7 @@ export interface MurfGenerationResponse {
 export const getMurfApiKey = (): string => {
   return (
     (typeof process !== 'undefined' && process.env && (process.env.MURF_API_KEY || process.env.VITE_MURF_API_KEY)) ||
-    ''
+    'ap2_de06251f-5bb6-4e8d-befa-4f0cf61b0c39'
   );
 };
 

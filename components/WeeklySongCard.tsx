@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import type { WeeklyTheme } from '../types';
-import { renderDevotionalAudio, audioBufferToWavBlob, downloadSongFile } from '../utils/devotionalAudio';
+import { downloadSongFile } from '../utils/devotionalAudio';
 import { MASTER_TRACKS, type MasterTrackInfo } from '../constants/masterTracks';
 import { saveCustomSong, getCustomSong, deleteCustomSong } from '../utils/customSongDb';
 
@@ -19,14 +19,16 @@ export const WeeklySongCard: React.FC<WeeklySongCardProps> = ({
   onGenerateLyrics,
   onShowToast
 }) => {
-  const masterTrack: MasterTrackInfo | undefined = MASTER_TRACKS[entry.week];
+  const masterTrack: MasterTrackInfo | undefined = MASTER_TRACKS[Number(entry.week)] || MASTER_TRACKS[entry.week];
+  const trackInfo = masterTrack;
+  const defaultMp3Url = trackInfo ? trackInfo.audioUrl : `/audio/week_${entry.week}.mp3`;
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoadingAudio, setIsLoadingAudio] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(() => {
-    return masterTrack ? masterTrack.audioUrl : null;
+    return defaultMp3Url;
   });
   const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState<number>(() => (masterTrack ? masterTrack.duration : 240));
+  const [duration, setDuration] = useState<number>(() => (trackInfo ? trackInfo.duration : 212));
   const [volume, setVolume] = useState(0.85);
   const [showLyrics, setShowLyrics] = useState(false);
   const [customAudioInfo, setCustomAudioInfo] = useState<{ filename: string; objectUrl: string } | null>(null);
@@ -67,17 +69,13 @@ export const WeeklySongCard: React.FC<WeeklySongCardProps> = ({
 
       if (!isMounted) return;
       setCustomAudioInfo(null);
-      const track = MASTER_TRACKS[entry.week];
-      if (track) {
-        setAudioUrl(track.audioUrl);
-        setDuration(track.duration);
-        if (audioRef.current) {
-          audioRef.current.src = track.audioUrl;
-          audioRef.current.load();
-        }
-      } else {
-        setAudioUrl(null);
-        setDuration(240);
+      const track = MASTER_TRACKS[Number(entry.week)] || MASTER_TRACKS[entry.week];
+      const actualUrl = track ? track.audioUrl : `/audio/week_${entry.week}.mp3`;
+      setAudioUrl(actualUrl);
+      setDuration(track ? track.duration : 212);
+      if (audioRef.current) {
+        audioRef.current.src = actualUrl;
+        audioRef.current.load();
       }
     };
 
@@ -92,26 +90,10 @@ export const WeeklySongCard: React.FC<WeeklySongCardProps> = ({
   }, [entry.week]);
 
   const prepareAudio = async (): Promise<string> => {
-    const track = MASTER_TRACKS[entry.week];
-    if (track) {
-      setAudioUrl(track.audioUrl);
-      return track.audioUrl;
-    }
-    if (audioUrl) return audioUrl;
-    setIsLoadingAudio(true);
-    try {
-      const buffer = await renderDevotionalAudio(entry.songGenre || 'Country Gospel', 24);
-      const blob = audioBufferToWavBlob(buffer);
-      cachedBlobRef.current = blob;
-      const url = URL.createObjectURL(blob);
-      setAudioUrl(url);
-      return url;
-    } catch (err) {
-      console.error('Audio generation failed:', err);
-      throw err;
-    } finally {
-      setIsLoadingAudio(false);
-    }
+    const track = MASTER_TRACKS[Number(entry.week)] || MASTER_TRACKS[entry.week];
+    const actualUrl = track ? track.audioUrl : `/audio/week_${entry.week}.mp3`;
+    setAudioUrl(actualUrl);
+    return actualUrl;
   };
 
   const togglePlay = async () => {
@@ -120,20 +102,15 @@ export const WeeklySongCard: React.FC<WeeklySongCardProps> = ({
         audioRef.current?.pause();
         setIsPlaying(false);
       } else {
-        let currentUrl = audioUrl;
-        const track = MASTER_TRACKS[entry.week];
-        if (!currentUrl) {
-          if (track) {
-            currentUrl = track.audioUrl;
-            setAudioUrl(currentUrl);
-          } else {
-            currentUrl = await prepareAudio();
-          }
+        const track = MASTER_TRACKS[Number(entry.week)] || MASTER_TRACKS[entry.week];
+        const actualUrl = audioUrl || (track ? track.audioUrl : `/audio/week_${entry.week}.mp3`);
+        if (!audioUrl) {
+          setAudioUrl(actualUrl);
         }
 
         if (audioRef.current) {
-          if (!audioRef.current.src || !audioRef.current.src.endsWith(currentUrl)) {
-            audioRef.current.src = currentUrl;
+          if (!audioRef.current.src || !audioRef.current.src.includes(actualUrl)) {
+            audioRef.current.src = actualUrl;
             audioRef.current.load();
           }
           audioRef.current.volume = volume;

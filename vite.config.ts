@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
       define: {
         'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || ''),
         'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY || env.VITE_GEMINI_API_KEY || ''),
-        'process.env.MURF_API_KEY': JSON.stringify(env.MURF_API_KEY || env.VITE_MURF_API_KEY || ''),
+        'process.env.MURF_API_KEY': JSON.stringify(env.MURF_API_KEY || env.VITE_MURF_API_KEY || 'ap2_de06251f-5bb6-4e8d-befa-4f0cf61b0c39'),
       },
       resolve: {
         alias: {

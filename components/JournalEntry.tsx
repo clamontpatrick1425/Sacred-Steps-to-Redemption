@@ -45,6 +45,15 @@ const LIMITS = {
     gratitudeNotes: 2000,
 };
 
+const appendReflection = (existing: string | undefined, newText: string): string => {
+  const current = (existing || '').trim();
+  const addition = (newText || '').trim();
+  if (!addition) return current;
+  if (!current) return addition;
+  const endsWithPunct = /[.!?]$/.test(current);
+  return `${current}${endsWithPunct ? ' ' : '. '}${addition}`;
+};
+
 const InfoCard: React.FC<{ title: string; children: React.ReactNode; icon?: React.ReactNode; action?: React.ReactNode; className?: string; }> = ({ title, children, icon, action, className }) => (
     <div className={`bg-card rounded-xl shadow-md p-6 transition-all hover:shadow-lg ${className || ''}`}>
         <div className="flex items-start justify-between mb-3">
@@ -622,7 +631,8 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                         <span className="ml-1 hidden sm:inline">Share</span>
                     </button>
                     <AudioRecorderButton 
-                        onTranscription={(text) => onResponseChange(entry.week, 'promptResponse', (responses.promptResponse || '') + ' ' + text)}
+                        fieldLabel="prompt reflection"
+                        onTranscription={(text) => onResponseChange(entry.week, 'promptResponse', appendReflection(responses.promptResponse, text))}
                         onShowToast={onShowToast}
                     />
                 </div>
@@ -671,7 +681,8 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                                 <span className="ml-1 hidden sm:inline">Share</span>
                             </button>
                             <AudioRecorderButton 
-                                onTranscription={(text) => onResponseChange(entry.week, 'reflection1Response', (responses.reflection1Response || '') + ' ' + text)}
+                                fieldLabel="Heart reflection"
+                                onTranscription={(text) => onResponseChange(entry.week, 'reflection1Response', appendReflection(responses.reflection1Response, text))}
                                 onShowToast={onShowToast}
                             />
                         </div>
@@ -715,7 +726,8 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                                 <span className="ml-1 hidden sm:inline">Share</span>
                             </button>
                             <AudioRecorderButton 
-                                onTranscription={(text) => onResponseChange(entry.week, 'reflection2Response', (responses.reflection2Response || '') + ' ' + text)}
+                                fieldLabel="Grace reflection"
+                                onTranscription={(text) => onResponseChange(entry.week, 'reflection2Response', appendReflection(responses.reflection2Response, text))}
                                 onShowToast={onShowToast}
                             />
                         </div>
@@ -783,7 +795,8 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
                                 )}
                                 <CharacterCount current={(responses.deeperReflectionResponse || '').length} max={LIMITS.reflectionResponse} />
                                 <AudioRecorderButton 
-                                    onTranscription={(text) => onResponseChange(entry.week, 'deeperReflectionResponse', (responses.deeperReflectionResponse || '') + ' ' + text)}
+                                    fieldLabel="deeper reflection"
+                                    onTranscription={(text) => onResponseChange(entry.week, 'deeperReflectionResponse', appendReflection(responses.deeperReflectionResponse, text))}
                                     onShowToast={onShowToast}
                                 />
                             </div>
@@ -830,7 +843,8 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
               )}
               <CharacterCount current={(responses.gratitudeNotes || '').length} max={LIMITS.gratitudeNotes} />
               <AudioRecorderButton 
-                onTranscription={(text) => onResponseChange(entry.week, 'gratitudeNotes', (responses.gratitudeNotes || '') + (responses.gratitudeNotes ? ' ' : '') + text)}
+                fieldLabel="gratitude notes"
+                onTranscription={(text) => onResponseChange(entry.week, 'gratitudeNotes', appendReflection(responses.gratitudeNotes, text))}
                 onShowToast={onShowToast}
               />
             </div>

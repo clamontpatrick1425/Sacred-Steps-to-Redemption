@@ -1038,6 +1038,8 @@ const App: React.FC = () => {
         onOpenPhonePreview={() => setIsPhonePreviewOpen(true)}
         onOpenPrivacy={() => handleOpenLegalModal('privacy')}
         onOpenTerms={() => handleOpenLegalModal('terms')}
+        currentWeek={currentWeek}
+        activeSongTitle={selectedEntry?.songTitle}
       />
       <div className="container mx-auto p-4 md:p-8">
         {renderContent()}

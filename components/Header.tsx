@@ -11,6 +11,8 @@ interface HeaderProps {
     onOpenPhonePreview?: () => void;
     onOpenPrivacy?: () => void;
     onOpenTerms?: () => void;
+    currentWeek?: number;
+    activeSongTitle?: string;
 }
 
 const SettingsIcon = () => (
@@ -67,6 +69,8 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenPhonePreview,
   onOpenPrivacy,
   onOpenTerms,
+  currentWeek = 1,
+  activeSongTitle,
 }) => {
   const hour = new Date().getHours();
   let greeting = 'Good evening';
@@ -74,48 +78,47 @@ export const Header: React.FC<HeaderProps> = ({
   else if (hour < 18) greeting = 'Good afternoon';
 
   const [isPlayingSound, setIsPlayingSound] = useState(false);
-  const audioCtxRef = useRef<AudioContext | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const soundtrackSrc = `/audio/week_${currentWeek}.mp3`;
 
-  const toggleSound = () => {
-    try {
-      if (isPlayingSound) {
-        if (audioCtxRef.current) {
-          audioCtxRef.current.close().catch(() => {});
-          audioCtxRef.current = null;
-        }
-        setIsPlayingSound(false);
-      } else {
-        const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-        const ctx = new AudioCtx();
-        audioCtxRef.current = ctx;
-
-        const gainNode = ctx.createGain();
-        gainNode.gain.setValueAtTime(0.06, ctx.currentTime);
-        gainNode.connect(ctx.destination);
-
-        // Peaceful prayer frequencies (432Hz & 540Hz)
-        [432, 540].forEach((freq, idx) => {
-          const osc = ctx.createOscillator();
-          osc.type = 'sine';
-          osc.frequency.setValueAtTime(freq, ctx.currentTime);
-          osc.connect(gainNode);
-          osc.start(ctx.currentTime + idx * 0.15);
-        });
-
-        setIsPlayingSound(true);
-      }
-    } catch {
-      setIsPlayingSound((prev) => !prev);
+  useEffect(() => {
+    setIsPlayingSound(false);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.src = soundtrackSrc;
+      audioRef.current.load();
     }
-  };
+  }, [currentWeek, soundtrackSrc]);
 
   useEffect(() => {
     return () => {
-      if (audioCtxRef.current) {
-        audioCtxRef.current.close().catch(() => {});
+      if (audioRef.current) {
+        audioRef.current.pause();
       }
     };
   }, []);
+
+  const toggleSound = async () => {
+    if (!audioRef.current) return;
+    try {
+      if (isPlayingSound) {
+        audioRef.current.pause();
+        setIsPlayingSound(false);
+      } else {
+        if (!audioRef.current.src || !audioRef.current.src.includes(soundtrackSrc)) {
+          audioRef.current.src = soundtrackSrc;
+          audioRef.current.load();
+        }
+        audioRef.current.volume = 0.75;
+        await audioRef.current.play();
+        setIsPlayingSound(true);
+      }
+    } catch (e) {
+      console.warn('Devotional soundtrack play error in header:', e);
+      setIsPlayingSound(false);
+    }
+  };
 
   return (
     <header className="relative pt-3 pb-5 px-4 sm:px-6 bg-card border-b border-default shadow-xs text-center">
@@ -180,7 +183,18 @@ export const Header: React.FC<HeaderProps> = ({
             </button>
           )}
 
-          {/* Sound / Ambient Audio Toggle */}
+          {/* Devotional Soundtrack Audio Engine */}
+          <audio
+            ref={audioRef}
+            src={soundtrackSrc}
+            onPlay={() => setIsPlayingSound(true)}
+            onPause={() => setIsPlayingSound(false)}
+            onEnded={() => setIsPlayingSound(false)}
+            onError={() => setIsPlayingSound(false)}
+            preload="none"
+          />
+
+          {/* Sound / Ambient Soundtrack Toggle */}
           <button
             onClick={toggleSound}
             className={`p-1.5 rounded-full transition-colors focus:outline-none focus:ring-2 ring-primary cursor-pointer ${
@@ -188,8 +202,8 @@ export const Header: React.FC<HeaderProps> = ({
                 ? 'bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950 dark:text-amber-200 shadow-2xs'
                 : 'text-muted hover:text-main hover:bg-card-secondary'
             }`}
-            aria-label={isPlayingSound ? 'Mute ambient prayer sound' : 'Play ambient prayer chime'}
-            title={isPlayingSound ? 'Mute ambient chime' : 'Play peaceful chime'}
+            aria-label={isPlayingSound ? 'Pause Devotional Soundtrack' : 'Play Week Devotional Soundtrack'}
+            title={isPlayingSound ? 'Pause Devotional Soundtrack' : `Play Week ${currentWeek} Devotional Soundtrack${activeSongTitle ? `: "${activeSongTitle}"` : ''}`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
               {isPlayingSound ? (
