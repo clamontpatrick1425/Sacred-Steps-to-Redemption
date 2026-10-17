@@ -5,6 +5,8 @@ import { generateRedemptionReport } from '../services/geminiService';
 import type { SavedEntries, WeeklyTheme } from '../types';
 import { SponsorCheckInCard } from './SponsorCheckInCard';
 import { exportCompletedJournalToPDF } from '../utils/pdfExport';
+import { RecoveryProgressChart } from './RecoveryProgressChart';
+
 
 interface RedemptionDashboardProps {
   user: { name: string; email: string; uid?: string } | null;
@@ -239,6 +241,15 @@ export const RedemptionDashboard: React.FC<RedemptionDashboardProps> = ({
           currentWeek={currentWeek} 
           userName={user?.name} 
           onShowToast={onShowToast} 
+        />
+
+        {/* Visual Recovery Progress Chart (Recharts) */}
+        <RecoveryProgressChart
+          savedEntries={savedEntries}
+          allThemes={allThemes}
+          triggers={triggers}
+          currentWeek={currentWeek}
+          onShowToast={onShowToast}
         />
 
         <div className="grid md:grid-cols-12 gap-8">
