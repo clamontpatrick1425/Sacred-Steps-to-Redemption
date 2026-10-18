@@ -106,5 +106,9 @@ service cloud.firestore {
       );
       allow delete: if isAuthenticated() && resource.data.authorUid == request.auth.uid;
     }
+
+    match /test/{testId} {
+      allow read: if true;
+    }
   }
 }

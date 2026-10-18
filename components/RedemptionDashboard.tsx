@@ -6,6 +6,7 @@ import type { SavedEntries, WeeklyTheme } from '../types';
 import { SponsorCheckInCard } from './SponsorCheckInCard';
 import { exportCompletedJournalToPDF } from '../utils/pdfExport';
 import { RecoveryProgressChart } from './RecoveryProgressChart';
+import { DaysSoberCounter } from './DaysSoberCounter';
 
 
 interface RedemptionDashboardProps {
@@ -54,6 +55,35 @@ export const RedemptionDashboard: React.FC<RedemptionDashboardProps> = ({
   // PDF Export state
   const [isExportingPDF, setIsExportingPDF] = useState(false);
   const [pdfNotification, setPdfNotification] = useState<{ text: string; type: 'success' | 'error' | 'info' } | null>(null);
+
+  // Sobriety days calculation
+  const [soberDaysCount, setSoberDaysCount] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem('soberStartDate');
+      const start = stored ? new Date(stored + 'T00:00:00') : new Date(Date.now() - 14 * 86400000);
+      return Math.max(0, Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24)));
+    } catch {
+      return 14;
+    }
+  });
+
+  useEffect(() => {
+    const updateSoberDays = () => {
+      try {
+        const stored = localStorage.getItem('soberStartDate');
+        const start = stored ? new Date(stored + 'T00:00:00') : new Date(Date.now() - 14 * 86400000);
+        setSoberDaysCount(Math.max(0, Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24))));
+      } catch {
+        // Ignore fallback
+      }
+    };
+    window.addEventListener('storage', updateSoberDays);
+    const interval = setInterval(updateSoberDays, 60000);
+    return () => {
+      window.removeEventListener('storage', updateSoberDays);
+      clearInterval(interval);
+    };
+  }, []);
 
   const handleExportPDF = () => {
     setIsExportingPDF(true);
@@ -182,27 +212,34 @@ export const RedemptionDashboard: React.FC<RedemptionDashboardProps> = ({
       </div>
 
       {/* Stats Matrix Grid */}
-      <div className="grid grid-cols-2 md:grid-cols-4 border-b border-default text-center">
-        <div className="p-6 border-r border-default">
+      <div className="grid grid-cols-2 md:grid-cols-5 border-b border-default text-center">
+        <div className="p-5 border-r border-default">
           <p className="text-xs text-muted uppercase font-bold tracking-wider">Weeks Complete</p>
-          <p className="text-4xl font-extrabold text-primary mt-1">{completedWeeksCount} <span className="text-sm text-subtle font-normal">/ {totalWeeks}</span></p>
+          <p className="text-3xl sm:text-4xl font-extrabold text-primary mt-1">{completedWeeksCount} <span className="text-sm text-subtle font-normal">/ {totalWeeks}</span></p>
           <div className="w-full bg-card-secondary h-1.5 rounded-full mt-2.5 max-w-[120px] mx-auto overflow-hidden">
             <div className="bg-primary h-full rounded-full" style={{ width: `${completedPercentage}%` }} />
           </div>
         </div>
-        <div className="p-6 border-r border-default">
+        <div className="p-5 border-r border-default">
           <p className="text-xs text-muted uppercase font-bold tracking-wider">Success Streak</p>
-          <p className="text-4xl font-extrabold text-accent mt-1">{reflectionStreak} <span className="text-sm text-subtle font-normal">weeks</span></p>
+          <p className="text-3xl sm:text-4xl font-extrabold text-accent mt-1">{reflectionStreak} <span className="text-sm text-subtle font-normal">weeks</span></p>
           <p className="text-[11px] text-muted italic mt-2">Active reflection loop</p>
         </div>
-        <div className="p-6 border-r border-default">
-          <p className="text-xs text-muted uppercase font-bold tracking-wider">Thanksgiving Logs</p>
-          <p className="text-4xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">{gratitudeCount}</p>
-          <p className="text-[11px] text-muted italic mt-2">Items compiled in Gratitude Jar</p>
+        <div className="p-5 border-r border-default col-span-2 md:col-span-1 bg-amber-500/5">
+          <p className="text-xs text-[#AA8010] dark:text-[#F5D77F] uppercase font-bold tracking-wider flex items-center justify-center gap-1">
+            <span>🌱</span> Days Sober
+          </p>
+          <p className="text-3xl sm:text-4xl font-extrabold text-[#D4AF37] mt-1">{soberDaysCount} <span className="text-sm text-subtle font-normal">days</span></p>
+          <p className="text-[11px] text-muted italic mt-2">Continuous clean walk</p>
         </div>
-        <div className="p-6">
+        <div className="p-5 border-r border-default">
+          <p className="text-xs text-muted uppercase font-bold tracking-wider">Thanksgiving Logs</p>
+          <p className="text-3xl sm:text-4xl font-extrabold text-emerald-600 dark:text-emerald-400 mt-1">{gratitudeCount}</p>
+          <p className="text-[11px] text-muted italic mt-2">Items in Gratitude Jar</p>
+        </div>
+        <div className="p-5">
           <p className="text-xs text-muted uppercase font-bold tracking-wider">Trigger Controls</p>
-          <p className="text-4xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">{triggers.length}</p>
+          <p className="text-3xl sm:text-4xl font-extrabold text-amber-600 dark:text-amber-400 mt-1">{triggers.length}</p>
           <p className="text-[11px] text-muted italic mt-2">Total cravings reported</p>
         </div>
       </div>
@@ -242,6 +279,26 @@ export const RedemptionDashboard: React.FC<RedemptionDashboardProps> = ({
           userName={user?.name} 
           onShowToast={onShowToast} 
         />
+
+        {/* Days Sober Counter Section */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center space-x-2">
+              <span className="p-1 rounded bg-[#D4AF37]/15 text-[#D4AF37]">
+                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              </span>
+              <h3 className="font-cinzel text-base font-bold text-main">
+                Sobriety Counter &amp; Grace Milestones
+              </h3>
+            </div>
+            <span className="text-xs text-muted italic">
+              &ldquo;God's mercies are new every morning.&rdquo;
+            </span>
+          </div>
+          <DaysSoberCounter onShowToast={onShowToast} />
+        </div>
 
         {/* Visual Recovery Progress Chart (Recharts) */}
         <RecoveryProgressChart

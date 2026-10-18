@@ -13,6 +13,7 @@ interface HeaderProps {
     onOpenTerms?: () => void;
     currentWeek?: number;
     activeSongTitle?: string;
+    onOpenSoberCounter?: () => void;
 }
 
 const SettingsIcon = () => (
@@ -71,11 +72,34 @@ export const Header: React.FC<HeaderProps> = ({
   onOpenTerms,
   currentWeek = 1,
   activeSongTitle,
+  onOpenSoberCounter,
 }) => {
   const hour = new Date().getHours();
   let greeting = 'Good evening';
   if (hour < 12) greeting = 'Good morning';
   else if (hour < 18) greeting = 'Good afternoon';
+
+  const [daysSober, setDaysSober] = useState<number>(() => {
+    try {
+      const stored = localStorage.getItem('soberStartDate');
+      const start = stored ? new Date(stored + 'T00:00:00') : new Date(Date.now() - 14 * 86400000);
+      return Math.max(0, Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24)));
+    } catch {
+      return 14;
+    }
+  });
+
+  useEffect(() => {
+    const handleStorage = () => {
+      try {
+        const stored = localStorage.getItem('soberStartDate');
+        const start = stored ? new Date(stored + 'T00:00:00') : new Date(Date.now() - 14 * 86400000);
+        setDaysSober(Math.max(0, Math.floor((Date.now() - start.getTime()) / (1000 * 60 * 60 * 24))));
+      } catch {}
+    };
+    window.addEventListener('storage', handleStorage);
+    return () => window.removeEventListener('storage', handleStorage);
+  }, []);
 
   const [isPlayingSound, setIsPlayingSound] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -154,6 +178,25 @@ export const Header: React.FC<HeaderProps> = ({
           >
             <TriggerIcon />
             <span>Daily Triggers</span>
+          </button>
+          <button
+            id="header-days-sober-btn"
+            onClick={() => {
+              if (onOpenSoberCounter) {
+                onOpenSoberCounter();
+              } else {
+                const el = document.getElementById('days-sober-counter-card');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+              }
+            }}
+            className="flex items-center space-x-1.5 px-3 py-1.5 bg-amber-500/10 text-amber-800 dark:text-amber-300 hover:bg-amber-500/20 border border-amber-300 dark:border-amber-700/50 rounded-full font-semibold transition-all focus:outline-none focus:ring-2 ring-amber-400 text-xs tracking-wide cursor-pointer"
+            aria-label="Days Sober Counter"
+            title="View Days Sober & Grace Milestones"
+          >
+            <span className="text-xs">🌱</span>
+            <span>{daysSober} Days Sober</span>
           </button>
         </div>
 

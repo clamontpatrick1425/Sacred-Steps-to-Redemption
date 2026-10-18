@@ -1201,7 +1201,22 @@ export const PhonePreviewModal: React.FC<PhonePreviewModalProps> = ({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-stone-100">
+                        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-stone-100">
+                          <div className="bg-stone-50 p-2.5 rounded-lg text-center border border-stone-200">
+                            <span className="block text-lg font-bold text-[#AA8010]">
+                              {(() => {
+                                try {
+                                  const start = localStorage.getItem('soberStartDate');
+                                  if (start) {
+                                    const diff = Date.now() - new Date(start + 'T00:00:00').getTime();
+                                    return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
+                                  }
+                                } catch {}
+                                return 14;
+                              })()}
+                            </span>
+                            <span className="text-[10px] text-stone-500">Days Sober</span>
+                          </div>
                           <div className="bg-stone-50 p-2.5 rounded-lg text-center border border-stone-200">
                             <span className="block text-lg font-bold text-[#AA8010]">
                               {currentWeek} / 52

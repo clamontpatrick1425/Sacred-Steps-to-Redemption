@@ -19,6 +19,7 @@ import { MilestoneCard } from './components/MilestoneCard';
 import { NotificationToast } from './components/NotificationToast';
 import { SettingsModal } from './components/SettingsModal';
 import { StreakTracker } from './components/StreakTracker';
+import { DaysSoberCounter } from './components/DaysSoberCounter';
 import { InteractiveParable } from './components/InteractiveParable';
 import { ParablePlayerModal } from './components/ParablePlayerModal';
 import { AuthModal } from './components/AuthModal';
@@ -927,6 +928,7 @@ const App: React.FC = () => {
                     completedWeeks={completedWeeksCount}
                     totalWeeks={themes.length || 52}
                   />
+                  <DaysSoberCounter onShowToast={showToast} />
                   <StreakTracker streak={reflectionStreak} />
                   <MoodTracker />
                   <MeditationTimer />
@@ -1040,6 +1042,12 @@ const App: React.FC = () => {
         onOpenTerms={() => handleOpenLegalModal('terms')}
         currentWeek={currentWeek}
         activeSongTitle={selectedEntry?.songTitle}
+        onOpenSoberCounter={() => {
+          const el = document.getElementById('days-sober-counter-card');
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }}
       />
       <div className="container mx-auto p-4 md:p-8">
         {renderContent()}

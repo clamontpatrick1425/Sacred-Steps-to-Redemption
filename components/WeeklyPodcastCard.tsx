@@ -98,6 +98,7 @@ export const WeeklyPodcastCard: React.FC<WeeklyPodcastCardProps> = ({
   const [isMuted, setIsMuted] = useState(false);
   const [playbackRate, setPlaybackRate] = useState<number>(1.0);
   const [autoScrollTranscript, setAutoScrollTranscript] = useState(true);
+  const [showTranscriptModal, setShowTranscriptModal] = useState(false);
   const [availableVoices, setAvailableVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceId, setSelectedVoiceId] = useState<string>('en-US-terrell');
   const [activeTab, setActiveTab] = useState<'player' | 'download'>('player');
@@ -777,8 +778,8 @@ export const WeeklyPodcastCard: React.FC<WeeklyPodcastCardProps> = ({
     onShowToast('Full spoken transcript copied to clipboard!', 'success');
   };
 
-  // Download transcript as text file
-  const handleDownloadTranscript = () => {
+  // Download transcript as text file directly
+  const handleDownloadTranscriptFile = () => {
     const blob = new Blob([activeScript], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -789,6 +790,136 @@ export const WeeklyPodcastCard: React.FC<WeeklyPodcastCardProps> = ({
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
     onShowToast(`Downloaded Week ${entry.week} transcript.`, 'info');
+  };
+
+  // Open transcript modal window before downloading or printing
+  const handleDownloadTranscript = () => {
+    setShowTranscriptModal(true);
+  };
+
+  // Clean printable view for the devotional transcript
+  const handlePrintTranscript = () => {
+    try {
+      const existingIframe = document.getElementById('transcript-print-frame');
+      if (existingIframe) {
+        existingIframe.remove();
+      }
+      const iframe = document.createElement('iframe');
+      iframe.id = 'transcript-print-frame';
+      iframe.style.position = 'fixed';
+      iframe.style.right = '0';
+      iframe.style.bottom = '0';
+      iframe.style.width = '0';
+      iframe.style.height = '0';
+      iframe.style.border = '0';
+      document.body.appendChild(iframe);
+
+      const doc = iframe.contentWindow?.document || iframe.contentDocument;
+      if (doc) {
+        doc.open();
+        doc.write(`
+          <!DOCTYPE html>
+          <html>
+            <head>
+              <meta charset="utf-8" />
+              <title>Week ${entry.week}: ${entry.theme} - Devotional Reflection Transcript</title>
+              <style>
+                @page { margin: 20mm; }
+                body {
+                  font-family: Georgia, 'Times New Roman', serif;
+                  line-height: 1.8;
+                  color: #111827;
+                  background: #ffffff;
+                  padding: 24px;
+                  max-width: 720px;
+                  margin: 0 auto;
+                }
+                h1 {
+                  font-family: 'Cinzel', Georgia, serif;
+                  font-size: 22px;
+                  color: #1C2A39;
+                  margin: 0 0 6px 0;
+                  text-align: center;
+                }
+                .subtitle {
+                  font-size: 13px;
+                  font-weight: bold;
+                  color: #AA8010;
+                  text-transform: uppercase;
+                  letter-spacing: 0.08em;
+                  text-align: center;
+                  margin-bottom: 24px;
+                }
+                .anchor-card {
+                  background: #fbf9f4;
+                  border-left: 4px solid #D4AF37;
+                  padding: 14px 18px;
+                  margin-bottom: 24px;
+                  border-radius: 6px;
+                }
+                .anchor-title {
+                  font-size: 13px;
+                  font-weight: bold;
+                  color: #1C2A39;
+                  margin-bottom: 6px;
+                }
+                .anchor-verse {
+                  font-style: italic;
+                  color: #374151;
+                  font-size: 14px;
+                  line-height: 1.6;
+                  margin: 0;
+                }
+                .transcript-body {
+                  font-size: 15px;
+                  color: #1f2937;
+                }
+                .transcript-p {
+                  margin-bottom: 16px;
+                  text-align: justify;
+                }
+                .footer {
+                  margin-top: 40px;
+                  padding-top: 14px;
+                  border-top: 1px solid #e5e7eb;
+                  text-align: center;
+                  font-size: 11px;
+                  color: #6b7280;
+                  font-family: sans-serif;
+                }
+              </style>
+            </head>
+            <body>
+              <h1>Sacred Steps to Redemption</h1>
+              <div class="subtitle">Week ${entry.week}: ${entry.theme} • Devotional Reflection Spoken Transcript</div>
+              <div class="anchor-card">
+                <div class="anchor-title">Scripture Anchor: ${entry.bibleVerse || ''}</div>
+                <p class="anchor-verse">"${(entry.bibleVerseText || '').replace(/"/g, '&quot;')}"</p>
+              </div>
+              <div class="transcript-body">
+                ${activeScript
+                  .split('\\n\\n')
+                  .filter(p => p.trim())
+                  .map(p => `<p class="transcript-p">${p.replace(/</g, '&lt;').replace(/>/g, '&gt;')}</p>`)
+                  .join('')}
+              </div>
+              <div class="footer">
+                Sacred Steps to Redemption • A 52-Week Recovery Journal of Reflection, Gratitude &amp; Prayer<br/>
+                &ldquo;A Path to Recovery, A Life in Grace.&rdquo;
+              </div>
+            </body>
+          </html>
+        `);
+        doc.close();
+        setTimeout(() => {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        }, 300);
+      }
+    } catch (e) {
+      console.error('Print frame error:', e);
+      window.print();
+    }
   };
 
   // Download podcast audio file (MP3 / WAV)
@@ -1238,100 +1369,17 @@ export const WeeklyPodcastCard: React.FC<WeeklyPodcastCardProps> = ({
           </div>
         </div>
 
-        {/* Devotional Reading Header */}
-        <div className="flex items-center justify-between border-b border-default pb-2">
-          <div className="flex items-center space-x-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-main font-sans">
-              Devotional Reflection Transcript
-            </h4>
-          </div>
-
-          <div className="flex items-center space-x-2">
-            <label className="hidden sm:flex items-center space-x-1.5 text-[11px] text-muted cursor-pointer select-none">
-              <input
-                type="checkbox"
-                checked={autoScrollTranscript}
-                onChange={(e) => setAutoScrollTranscript(e.target.checked)}
-                className="rounded border-default text-[#D4AF37] focus:ring-[#D4AF37] accent-[#D4AF37] cursor-pointer"
-              />
-              <span>Auto-scroll</span>
-            </label>
-
-            <button
-              onClick={handleCopyTranscript}
-              title="Copy transcript"
-              className="px-2.5 py-1 text-[11px] font-semibold rounded bg-card-secondary border border-default hover:bg-card text-main transition-colors flex items-center space-x-1"
-            >
-              <svg className="w-3.5 h-3.5 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-              </svg>
-              <span>Copy</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Read-Along Transcript */}
-        <div className="border border-default rounded-xl bg-card-secondary overflow-hidden shadow-inner">
-          <div
-            ref={transcriptContainerRef}
-            className="p-4 sm:p-5 max-h-72 sm:max-h-80 overflow-y-auto space-y-2 text-sm leading-relaxed font-serif text-main select-text"
-            tabIndex={0}
-            aria-label="Devotional Transcript"
-          >
-            {sentences.map((item, idx) => {
-              const isActive = idx === currentSentenceIndex;
-              return (
-                <div
-                  key={item.id}
-                  ref={isActive ? activeSentenceRef : null}
-                  onClick={() => handleSentenceClick(idx)}
-                  role="button"
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      handleSentenceClick(idx);
-                    }
-                  }}
-                  className={`p-2.5 rounded-lg transition-all duration-200 cursor-pointer ${
-                    isActive && isPlaying
-                      ? 'bg-[#D4AF37]/20 border-l-4 border-[#D4AF37] text-main font-semibold shadow-sm transform scale-[1.01]'
-                      : isActive
-                      ? 'bg-card border-l-4 border-[#D4AF37]/60 text-main font-medium shadow-sm'
-                      : 'hover:bg-card/70 text-muted hover:text-main'
-                  }`}
-                >
-                  <div className="flex items-start space-x-2">
-                    <span className="text-[10px] font-mono text-muted/70 flex-shrink-0 mt-0.5 select-none w-5">
-                      {idx + 1}.
-                    </span>
-                    <p className="flex-1">
-                      {item.text}
-                    </p>
-                    {isActive && isPlaying && (
-                      <span className="flex-shrink-0 text-[#D4AF37] mt-0.5 ml-1 animate-pulse">
-                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
-                          <path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z" />
-                        </svg>
-                      </span>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Bottom Action Strip: Clean & Simplified */}
-        <div className="flex flex-wrap items-center justify-between gap-3 pt-2 border-t border-default">
+        {/* Bottom Action Strip: Clean & Streamlined */}
+        <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-default">
           <div className="flex items-center gap-2">
             <button
               id={`podcast-download-btn-week-${entry.week}`}
               onClick={handleDownloadTranscript}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-card-secondary border border-default hover:bg-card text-main transition-colors"
-              title="Download full devotional transcript"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-card-secondary border border-default hover:bg-card text-main hover:border-[#D4AF37]/50 transition-all cursor-pointer shadow-2xs active:scale-[0.98]"
+              title="Open devotional transcript popup to review, print, or download"
             >
               <svg className="w-4 h-4 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
               </svg>
               <span>Download Transcript</span>
             </button>
@@ -1355,7 +1403,7 @@ export const WeeklyPodcastCard: React.FC<WeeklyPodcastCardProps> = ({
                 }
                 onShowToast(`Reset devotional audio for Week ${entry.week}.`, 'info');
               }}
-              className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-muted hover:text-amber-400 hover:bg-card-secondary transition-colors"
+              className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg text-muted hover:text-amber-400 hover:bg-card-secondary transition-colors cursor-pointer"
               title="Reset audio for this week"
             >
               <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -1366,6 +1414,131 @@ export const WeeklyPodcastCard: React.FC<WeeklyPodcastCardProps> = ({
           </div>
         </div>
       </div>
+      )}
+
+      {/* Devotional Reflection Transcript Popup Window */}
+      {showTranscriptModal && (
+        <div
+          className="fixed inset-0 z-50 bg-black/75 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-fade-in"
+          onClick={() => setShowTranscriptModal(false)}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby={`transcript-title-week-${entry.week}`}
+        >
+          <div
+            className="bg-card text-main border border-default rounded-2xl max-w-2xl w-full max-h-[88vh] flex flex-col shadow-2xl overflow-hidden animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-4 sm:p-5 border-b border-default bg-card-secondary flex items-center justify-between gap-3 shrink-0">
+              <div className="flex items-center space-x-3 min-w-0">
+                <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-[#D4AF37] border border-[#D4AF37]/30 flex items-center justify-center shrink-0">
+                  <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                  </svg>
+                </div>
+                <div className="min-w-0">
+                  <h3 id={`transcript-title-week-${entry.week}`} className="font-cinzel text-sm sm:text-base font-bold text-main truncate">
+                    Devotional Reflection Transcript • Week {entry.week}
+                  </h3>
+                  <p className="text-[11px] text-muted truncate">
+                    {entry.theme} &bull; Sacred Steps to Redemption
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons in Header */}
+              <div className="flex items-center gap-1.5 shrink-0">
+                <button
+                  id={`print-transcript-modal-btn-week-${entry.week}`}
+                  onClick={handlePrintTranscript}
+                  className="inline-flex items-center space-x-1 px-3 py-1.5 rounded-lg bg-[#D4AF37] text-slate-950 font-bold text-xs hover:bg-[#AA8010] hover:text-white transition-all shadow-xs cursor-pointer active:scale-95"
+                  title="Print clean devotional transcript"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  <span>Print</span>
+                </button>
+                <button
+                  id={`download-transcript-file-modal-btn-week-${entry.week}`}
+                  onClick={handleDownloadTranscriptFile}
+                  className="inline-flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-card border border-default hover:bg-card-secondary text-main text-xs font-semibold transition-colors cursor-pointer"
+                  title="Download .TXT file"
+                >
+                  <svg className="w-3.5 h-3.5 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <span className="hidden sm:inline">.TXT</span>
+                </button>
+                <button
+                  onClick={() => setShowTranscriptModal(false)}
+                  className="p-1.5 text-muted hover:text-main rounded-lg hover:bg-card transition-colors cursor-pointer text-base leading-none"
+                  title="Close popup"
+                  aria-label="Close transcript window"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: Formatted Devotional Reading */}
+            <div className="p-5 sm:p-6 overflow-y-auto space-y-4 text-sm leading-relaxed font-serif select-text flex-1">
+              {/* Scripture Anchor Card */}
+              <div className="p-3.5 sm:p-4 rounded-xl bg-amber-500/5 border-l-4 border-[#D4AF37] border-default/40">
+                <span className="text-[10px] sm:text-xs uppercase font-sans font-bold tracking-wider text-[#AA8010] dark:text-[#F5D77F] block">
+                  Scripture Anchor: {entry.bibleVerse}
+                </span>
+                <p className="text-xs sm:text-sm italic text-main mt-1 font-serif-quote">
+                  &ldquo;{entry.bibleVerseText}&rdquo;
+                </p>
+              </div>
+
+              {/* Devotional Text Paragraphs */}
+              <div className="space-y-3.5 pt-1 text-main font-serif">
+                {activeScript
+                  .split('\n\n')
+                  .filter((p) => p.trim())
+                  .map((paragraph, pIdx) => (
+                    <p key={pIdx} className="leading-relaxed text-sm sm:text-base">
+                      {paragraph}
+                    </p>
+                  ))}
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-3.5 sm:p-4 bg-card-secondary border-t border-default flex flex-wrap items-center justify-between gap-2.5 shrink-0">
+              <button
+                onClick={handleCopyTranscript}
+                className="inline-flex items-center space-x-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-card border border-default hover:bg-card-secondary text-main transition-colors cursor-pointer"
+              >
+                <svg className="w-3.5 h-3.5 text-[#D4AF37]" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                <span>Copy to Clipboard</span>
+              </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handlePrintTranscript}
+                  className="inline-flex items-center space-x-1.5 px-3.5 py-1.5 text-xs font-bold rounded-lg bg-[#D4AF37] text-slate-950 hover:bg-[#AA8010] hover:text-white transition-colors cursor-pointer shadow-xs"
+                >
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                  </svg>
+                  <span>Print Transcript</span>
+                </button>
+                <button
+                  onClick={() => setShowTranscriptModal(false)}
+                  className="px-3.5 py-1.5 text-xs font-medium rounded-lg bg-card border border-default hover:bg-card-secondary text-muted hover:text-main transition-colors cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
