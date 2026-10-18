@@ -1079,13 +1079,26 @@ const App: React.FC = () => {
               <YouTubeIcon />
               <span>Sacred Audio Channel</span>
             </a>
-            <a href="https://facebook.com" target="_blank" rel="noopener noreferrer" aria-label="Community on Facebook" className="flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary transition-colors">
+            <a
+              href="https://www.facebook.com/groups/1029510940137596"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Community on Facebook"
+              className="flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary transition-colors"
+            >
               <FacebookIcon />
               <span>Recovery Community</span>
             </a>
-            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer" aria-label="Daily Inspiration on Instagram" className="flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary transition-colors">
+            <a
+              href="https://www.instagram.com/sacredstepstoredemption"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Daily Inspiration on Instagram @sacredstepstoredemption"
+              data-handle="@scaredstepstorededemption"
+              className="flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary transition-colors"
+            >
               <InstagramIcon />
-              <span>@SacredStepsRecovery</span>
+              <span>@sacredstepstoredemption</span>
             </a>
             <a href="https://x.com" target="_blank" rel="noopener noreferrer" aria-label="Follow us on X" className="flex items-center gap-2 text-xs font-semibold text-muted hover:text-primary transition-colors">
               <XIcon />

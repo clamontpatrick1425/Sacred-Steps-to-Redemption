@@ -53,7 +53,7 @@ export const RecoverySEOFAQSection: React.FC<RecoverySEOFAQSectionProps> = () =>
             </div>
 
             <blockquote className="font-serif-quote italic text-main text-sm md:text-base border-l-2 border-primary pl-4 my-2 leading-relaxed">
-              &ldquo;I wrote this journal because pain that stays locked inside one person is just pain. But pain that gets handed to someone else, at the exact moment they need it, can be medicine. I created this journal hoping that my pain would be aspirin for someone else battling that same 800-pound gorilla.&rdquo;
+              &ldquo;I am sharing my story because pain that stays locked inside one person is just pain. But pain that gets handed to someone else, at the exact moment they need it, can be medicine. That&apos;s the only reason this app exists. I created it hoping my pain would be aspirin for someone else battling that same eight-hundred-pound gorilla.&rdquo;
             </blockquote>
           </div>
         </div>
@@ -96,25 +96,45 @@ export const RecoverySEOFAQSection: React.FC<RecoverySEOFAQSectionProps> = () =>
                 </button>
               </div>
 
-              {/* Core Scripture & Medicine Anchor */}
-              <blockquote className="font-serif-quote italic text-main text-sm sm:text-base border-l-4 border-[#D4AF37] pl-4 py-1 bg-primary/5 rounded-r-lg leading-relaxed">
-                &ldquo;I wrote this journal because pain that stays locked inside one person is just pain. But pain that gets handed to someone else, at the exact moment they need it, can be medicine. I created this journal hoping that my pain would be aspirin for someone else battling that same 800-pound gorilla.&rdquo;
+              {/* Core Anchor Quote */}
+              <blockquote className="font-serif-quote italic text-main text-sm sm:text-base border-l-4 border-[#D4AF37] pl-4 py-2 bg-primary/5 rounded-r-lg leading-relaxed">
+                &ldquo;Pain that stays locked inside one person is just pain. But pain that gets handed to someone else, at the exact moment they need it, can be medicine. That&apos;s the only reason this app exists. I created it hoping my pain would be aspirin for someone else battling that same eight-hundred-pound gorilla.&rdquo;
               </blockquote>
 
               {/* Full Narrative Content */}
               <div className="space-y-4 text-xs sm:text-sm text-main/90 leading-relaxed font-sans">
                 <p>
-                  On January 12th, 2018, I admitted myself into the VA hospital. I had been in an active, seventeen-year battle with cocaine addiction. Over those seventeen years, every time I picked up cocaine, it came back like a baby ape. But as the binge went on, that baby ape grew into an 800-pound gorilla named <strong>Pride</strong>.
+                  On January 12, 2018, I hit the hardest day of my life. Not just because I finally admitted I was powerless, though I was, but because I had to ask my son to drive me to the VA hospital so I could admit myself. I remember the look in his eyes. Hurt. Pain. A father is never supposed to put that look on his son&apos;s face.
                 </p>
                 <p>
-                  For a long time, I was a shiny trash can. On the outside, I had the car, the house, the clothes, the smile. But the garbage was piling up on the inside, rotting in the dark. Eventually, my outside caught up to my inside: beaten up, battered, rusted through. In the rooms of Cocaine Anonymous, I finally learned Step 1: <em>We admitted we were powerless over our addiction—that our lives had become unmanageable.</em>
+                  I remember exactly when it started again. I was thirty-seven, and cocaine came back into my life like a baby ape. Small. Almost manageable. I had no idea it would grow into an eight-hundred-pound gorilla named Pride, and that it would ride me for the next seventeen years.
                 </p>
                 <p>
-                  Step 1 knocks you down, but Step 2 lets you stand back up: <em>We came to believe that a Power greater than ourselves could restore us to sanity.</em> As August Wilson wrote: <em>&ldquo;Confront the dark parts of yourself, and work to banish them with illumination and forgiveness. Your willingness to wrestle with your demons will cause your angels to sing.&rdquo;</em>
+                  I lost jobs, more than I can count. I damaged my relationship with my son, my daughter, my father, people I called family, people I called friends. I faced death twice. Not a metaphor. Twice. My finances collapsed into chaos I couldn&apos;t find my way out of. That eight-hundred-pound gorilla pounded me into submission until there wasn&apos;t much self-esteem or self-respect left standing.
                 </p>
-                <div className="p-3.5 rounded-xl bg-card-secondary border border-default text-center">
-                  <p className="font-bold text-sm text-primary font-cinzel">
+                <p>
+                  That&apos;s where Step One of Cocaine Anonymous found me: <em>We admitted we were powerless over our addiction, that our lives had become unmanageable.</em> I didn&apos;t arrive at that sentence as a concept. I arrived at it as a fact I could no longer outrun.
+                </p>
+                <p>
+                  Step Two is what let me stand back up: <em>We came to believe that a Power greater than ourselves could restore us to sanity.</em> August Wilson wrote something that has stayed with me ever since: <span className="font-serif-quote italic">&ldquo;Confront the dark parts of yourself, and work to banish them with illumination and forgiveness. Your willingness to wrestle with your demons will cause your angels to sing.&rdquo;</span>
+                </p>
+                <p>
+                  I wrestled. I&apos;m still wrestling some days. But I&apos;m no longer wrestling alone, and I&apos;m no longer wrestling in silence.
+                </p>
+                <p>
+                  I am sharing my story because pain that stays locked inside one person is just pain. But pain that gets handed to someone else, at the exact moment they need it, can be medicine. That&apos;s the only reason this app exists. I created it hoping my pain would be aspirin for someone else battling that same eight-hundred-pound gorilla.
+                </p>
+                <div className="p-3.5 rounded-xl bg-card-secondary border border-primary/30 text-center shadow-2xs">
+                  <p className="font-bold text-sm text-primary font-cinzel tracking-wide">
                     The trash can can be emptied. The rust can be stripped. What&apos;s battered can still stand.
+                  </p>
+                </div>
+                <p>
+                  If you&apos;re carrying that gorilla right now, if pride, or shame, or seventeen years, or seventeen days has you pinned down, I need you to hear this: the trash can can be emptied. The rust can be stripped. What&apos;s battered can still stand. I&apos;m proof, and I&apos;m not special. I just finally admitted I was powerless, and I let something bigger than me do what I couldn&apos;t do myself.
+                </p>
+                <div className="pt-2 flex justify-end">
+                  <p className="font-cinzel font-bold text-sm text-primary tracking-wide">
+                    &mdash; C. Lamont Patrick
                   </p>
                 </div>
               </div>
