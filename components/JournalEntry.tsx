@@ -366,7 +366,7 @@ export const JournalEntry: React.FC<JournalEntryProps> = ({ entry, responses, on
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-default/40">
           <div>
             <h2 className="font-cinzel text-xl sm:text-2xl font-bold text-main tracking-wide leading-tight">
-              Interactive 12-Step Journal
+              Interactive Weekly Journal
             </h2>
             <p className="text-xs text-muted font-serif-quote italic mt-0.5">
               &ldquo;Sacred Steps to Redemption: A Year of Addiction Recovery&rdquo; by C. Lamont Patrick (Kya Daisy Publishing)

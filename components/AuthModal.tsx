@@ -6,10 +6,11 @@ interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
   onLogin: (user: { name: string; email: string }) => void;
+  onContinueAsGuest?: () => void;
 }
 
 const GoogleIcon = () => (
-  <svg className="w-5 h-5" viewBox="0 0 24 24">
+  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
     <path
       d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
       fill="#4285F4"
@@ -30,40 +31,105 @@ const GoogleIcon = () => (
 );
 
 const FacebookIcon = () => (
-   <svg className="w-5 h-5 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24">
-       <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z" />
-   </svg>
+  <svg className="w-5 h-5 shrink-0 text-[#1877F2]" fill="currentColor" viewBox="0 0 24 24">
+    <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z" />
+  </svg>
 );
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin, onContinueAsGuest }) => {
   const [isRegistering, setIsRegistering] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<{ code?: string; message: string; domain?: string } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [copiedDomain, setCopiedDomain] = useState(false);
+  const [showNetlifyGuide, setShowNetlifyGuide] = useState(false);
 
   if (!isOpen) return null;
 
-  const formatAuthError = (err: any): string => {
-    if (!err) return 'Authentication failed';
+  const currentHost = typeof window !== 'undefined' ? window.location.hostname : 'sacredstepsjournal.netlify.app';
+
+  const formatAuthError = (err: any): { code?: string; message: string; domain?: string } => {
+    if (!err) return { message: 'Authentication failed. Please try again.' };
+    const code = err.code || '';
     const msg = err.message || String(err);
-    if (err.code === 'auth/api-key-not-valid' || msg.includes('api-key-not-valid')) {
-      return 'Firebase Web API Key is invalid for this project. Please provide the apiKey (starts with AIzaSy...) and projectId from your Firebase Console (Project Settings > General > Web app).';
+
+    // Netlify / custom domain unauthorized error
+    if (code === 'auth/unauthorized-domain' || msg.includes('unauthorized-domain')) {
+      return {
+        code: 'auth/unauthorized-domain',
+        domain: currentHost,
+        message: `Domain not authorized in Firebase Authentication: "${currentHost}". Firebase blocks sign-ins on new hosting domains until the domain is added to Authorized Domains in your Firebase Console.`
+      };
     }
-    if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
-      return 'Invalid email or password. Please verify your credentials or create an account.';
+
+    if (code === 'auth/operation-not-allowed' || msg.includes('operation-not-allowed')) {
+      return {
+        code: 'auth/operation-not-allowed',
+        message: 'This sign-in provider is disabled in Firebase. In the Firebase Console, go to Authentication > Sign-in method and enable Email/Password or Google provider.'
+      };
     }
-    if (err.code === 'auth/email-already-in-use') {
-      return 'This email is already registered. Please sign in instead.';
+
+    if (code === 'auth/api-key-not-valid' || msg.includes('api-key-not-valid')) {
+      return {
+        code: 'auth/api-key-not-valid',
+        message: 'Firebase Web API Key is invalid or restricted for this domain. Please check Project Settings > General in Firebase Console.'
+      };
     }
-    if (err.code === 'auth/weak-password') {
-      return 'Password is too weak. Please use at least 6 characters.';
+
+    if (code === 'auth/popup-blocked' || msg.includes('popup-blocked')) {
+      return {
+        code: 'auth/popup-blocked',
+        message: 'The sign-in popup was blocked by your browser. Please allow popups for this site and try again.'
+      };
     }
-    if (err.code === 'auth/popup-closed-by-user') {
-      return 'Sign-in popup was closed before completing.';
+
+    if (code === 'auth/user-not-found' || code === 'auth/wrong-password' || code === 'auth/invalid-credential') {
+      return {
+        code: code,
+        message: 'Invalid email or password. Please verify your credentials or create a new account.'
+      };
     }
-    return msg;
+
+    if (code === 'auth/email-already-in-use') {
+      return {
+        code: code,
+        message: 'This email is already registered. Please sign in instead.'
+      };
+    }
+
+    if (code === 'auth/weak-password') {
+      return {
+        code: code,
+        message: 'Password is too weak. Please use at least 6 characters.'
+      };
+    }
+
+    if (code === 'auth/popup-closed-by-user') {
+      return {
+        code: code,
+        message: 'Sign-in popup was closed before completing.'
+      };
+    }
+
+    if (code === 'auth/network-request-failed') {
+      return {
+        code: code,
+        message: 'Network connection failed. Please check your internet connection or ad-blocker.'
+      };
+    }
+
+    return {
+      code,
+      message: msg
+    };
+  };
+
+  const handleCopyDomain = () => {
+    navigator.clipboard.writeText(currentHost);
+    setCopiedDomain(true);
+    setTimeout(() => setCopiedDomain(false), 3000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -86,130 +152,286 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, onLogin }
       setLoading(false);
     }
   };
-  
+
   const handleSocialLogin = async (providerName: string) => {
-      setError(null);
-      setLoading(true);
-      try {
-        const provider = providerName === 'Google' ? googleProvider : facebookProvider;
-        const result = await signInWithPopup(auth, provider);
-        onLogin({ name: result.user.displayName || 'User', email: result.user.email || '' });
-        onClose();
-      } catch (err: any) {
-        setError(formatAuthError(err));
-      } finally {
-        setLoading(false);
-      }
-  }
+    setError(null);
+    setLoading(true);
+    try {
+      const provider = providerName === 'Google' ? googleProvider : facebookProvider;
+      const result = await signInWithPopup(auth, provider);
+      onLogin({ name: result.user.displayName || 'User', email: result.user.email || '' });
+      onClose();
+    } catch (err: any) {
+      setError(formatAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGuest = () => {
+    if (onContinueAsGuest) {
+      onContinueAsGuest();
+    } else {
+      onClose();
+    }
+  };
 
   return (
-    <div className="no-print fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center z-50 p-4" aria-modal="true" role="dialog">
-      <div className="bg-card rounded-lg shadow-2xl max-w-md w-full flex flex-col animate-fade-in overflow-hidden">
-        <div className="p-8">
-            <h2 className="text-2xl font-bold text-center text-main mb-2">
-                {isRegistering ? 'Create an Account' : 'Welcome Back'}
-            </h2>
-            <p className="text-center text-muted mb-6">
-                {isRegistering ? 'Start your journey of redemption today.' : 'Sign in to continue your journey.'}
-            </p>
-
-            {error && <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">{error}</div>}
-
-            <div className="space-y-3 mb-6">
-                <button 
-                    onClick={() => handleSocialLogin('Google')}
-                    disabled={loading}
-                    className="w-full flex items-center justify-center px-4 py-2 border border-default rounded-md hover:bg-card-secondary transition-colors text-main font-medium disabled:opacity-50"
-                >
-                    <span className="mr-3"><GoogleIcon /></span>
-                    Continue with Google
-                </button>
-                <button 
-                    onClick={() => handleSocialLogin('Facebook')}
-                    disabled={loading}
-                    className="w-full flex items-center justify-center px-4 py-2 border border-default rounded-md hover:bg-card-secondary transition-colors text-main font-medium disabled:opacity-50"
-                >
-                    <span className="mr-3"><FacebookIcon /></span>
-                    Continue with Facebook
-                </button>
+    <div className="no-print fixed inset-0 bg-black/75 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto" aria-modal="true" role="dialog">
+      <div className="bg-card rounded-2xl shadow-2xl max-w-lg w-full flex flex-col my-8 border border-default overflow-hidden animate-fade-in">
+        <div className="p-6 sm:p-8">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <span className="inline-block px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#D4AF37]/15 text-[#996515] dark:text-[#F5D77F] uppercase tracking-wider mb-2">
+                Sacred Steps Sync
+              </span>
+              <h2 className="text-2xl font-bold text-main">
+                {isRegistering ? 'Create Your Account' : 'Welcome Back'}
+              </h2>
             </div>
-
-            <div className="relative mb-6">
-                <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-default"></div>
-                </div>
-                <div className="relative flex justify-center text-sm">
-                    <span className="px-2 bg-card text-muted">Or continue with email</span>
-                </div>
-            </div>
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-                {isRegistering && (
-                    <div className="animate-fade-in">
-                        <label htmlFor="name" className="block text-sm font-medium text-muted mb-1">Full Name</label>
-                        <input
-                            id="name"
-                            type="text"
-                            value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            className="w-full px-3 py-2 border border-input rounded-md focus:ring-primary focus:border-primary bg-card-secondary focus:bg-card"
-                            required={isRegistering}
-                            disabled={loading}
-                        />
-                    </div>
-                )}
-                <div>
-                    <label htmlFor="email" className="block text-sm font-medium text-muted mb-1">Email Address</label>
-                    <input
-                        id="email"
-                        type="email"
-                        value={email}
-                        onChange={(e) => setEmail(e.target.value)}
-                        className="w-full px-3 py-2 border border-input rounded-md focus:ring-primary focus:border-primary bg-card-secondary focus:bg-card"
-                        required
-                        disabled={loading}
-                    />
-                </div>
-                <div>
-                    <label htmlFor="password" className="block text-sm font-medium text-muted mb-1">Password</label>
-                    <input
-                        id="password"
-                        type="password"
-                        value={password}
-                        onChange={(e) => setPassword(e.target.value)}
-                        className="w-full px-3 py-2 border border-input rounded-md focus:ring-primary focus:border-primary bg-card-secondary focus:bg-card"
-                        required
-                        disabled={loading}
-                    />
-                </div>
-
-                <button
-                    type="submit"
-                    disabled={loading}
-                    className="w-full py-2.5 px-4 bg-primary text-on-primary rounded-md hover:bg-primary-hover focus:outline-none focus:ring-2 focus:ring-offset-2 ring-primary transition-colors font-medium mt-2 disabled:opacity-50"
-                >
-                    {loading ? 'Processing...' : (isRegistering ? 'Sign Up' : 'Sign In')}
-                </button>
-            </form>
-
-            <div className="mt-6 text-center text-sm">
-                <span className="text-muted">
-                    {isRegistering ? 'Already have an account? ' : "Don't have an account? "}
-                </span>
-                <button
-                    onClick={() => setIsRegistering(!isRegistering)}
-                    className="text-primary hover:text-primary-hover font-medium underline"
-                    disabled={loading}
-                >
-                    {isRegistering ? 'Sign In' : 'Sign Up'}
-                </button>
-            </div>
-        </div>
-        <div className="bg-card-secondary p-4 text-center border-t border-default">
-            <button onClick={onClose} className="text-sm text-muted hover:text-main" disabled={loading}>
-                Cancel
+            <button
+              onClick={onClose}
+              disabled={loading}
+              className="p-1 rounded-lg text-muted hover:text-main hover:bg-card-secondary transition-colors"
+              title="Close"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+              </svg>
             </button>
+          </div>
+
+          <p className="text-sm text-muted mb-6">
+            {isRegistering
+              ? 'Save your weekly reflections, clean clock milestones, and gratitude safely across your devices.'
+              : 'Sign in to sync your recovery steps, sponsors check-ins, and devotional entries.'}
+          </p>
+
+          {/* Domain Authorization Diagnostic Banner (When on Netlify or when error occurs) */}
+          {error?.code === 'auth/unauthorized-domain' && (
+            <div className="mb-6 p-4 bg-amber-50 dark:bg-amber-950/40 border border-amber-300 dark:border-amber-700 rounded-xl text-left">
+              <div className="flex items-start space-x-3">
+                <span className="text-xl">⚠️</span>
+                <div className="flex-1">
+                  <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">
+                    Netlify Domain Authorization Required
+                  </h4>
+                  <p className="text-xs text-amber-800 dark:text-amber-300 mt-1 leading-relaxed">
+                    Firebase blocks authentication requests from this site because <strong>{currentHost}</strong> has not been added to your Firebase <em>Authorized Domains</em> list yet.
+                  </p>
+
+                  <div className="mt-3 p-2.5 bg-white dark:bg-stone-900 rounded-lg border border-amber-200 dark:border-amber-800 flex items-center justify-between gap-2">
+                    <span className="font-mono text-xs font-semibold text-stone-800 dark:text-stone-200 truncate">
+                      {currentHost}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleCopyDomain}
+                      className="px-2.5 py-1 text-xs font-medium rounded bg-amber-100 hover:bg-amber-200 dark:bg-amber-900 dark:hover:bg-amber-800 text-amber-900 dark:text-amber-100 transition-colors shrink-0"
+                    >
+                      {copiedDomain ? '✓ Copied!' : 'Copy Domain'}
+                    </button>
+                  </div>
+
+                  <div className="mt-3 space-y-1.5 text-[11px] text-amber-900/90 dark:text-amber-300">
+                    <p className="font-semibold">Quick 60-second fix in Firebase Console:</p>
+                    <ol className="list-decimal pl-4 space-y-1">
+                      <li>Go to <a href="https://console.firebase.google.com" target="_blank" rel="noopener noreferrer" className="underline font-bold">Firebase Console</a> and select your project.</li>
+                      <li>Click <strong>Authentication</strong> → <strong>Settings</strong> tab → <strong>Authorized domains</strong>.</li>
+                      <li>Click <strong>Add domain</strong> and paste <code>{currentHost}</code>.</li>
+                      <li>Click <strong>Save</strong>. Login will work immediately!</li>
+                    </ol>
+                  </div>
+
+                  <div className="mt-4 pt-3 border-t border-amber-200 dark:border-amber-800 flex items-center justify-between">
+                    <span className="text-xs text-amber-800 dark:text-amber-400">
+                      Need immediate access?
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleGuest}
+                      className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-colors"
+                    >
+                      Continue in Guest Mode →
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Generic / Other Error Banner */}
+          {error && error.code !== 'auth/unauthorized-domain' && (
+            <div className="mb-5 p-3.5 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 rounded-xl text-sm border border-red-200 dark:border-red-900 flex items-start space-x-2">
+              <span className="shrink-0 text-base">⚠️</span>
+              <div className="flex-1">
+                <p className="font-medium">{error.message}</p>
+                {error.code === 'auth/operation-not-allowed' && (
+                  <p className="mt-2 text-xs text-red-600 dark:text-red-400">
+                    Fix: Enable <strong>Email/Password</strong> or <strong>Google</strong> under Authentication → Sign-in method in Firebase Console.
+                  </p>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Social Sign-In Buttons */}
+          <div className="space-y-3 mb-6">
+            <button
+              type="button"
+              onClick={() => handleSocialLogin('Google')}
+              disabled={loading}
+              className="w-full flex items-center justify-center px-4 py-2.5 border border-default rounded-xl hover:bg-card-secondary transition-all text-main font-semibold shadow-sm hover:shadow disabled:opacity-50"
+            >
+              <span className="mr-3"><GoogleIcon /></span>
+              Continue with Google
+            </button>
+            <button
+              type="button"
+              onClick={() => handleSocialLogin('Facebook')}
+              disabled={loading}
+              className="w-full flex items-center justify-center px-4 py-2.5 border border-default rounded-xl hover:bg-card-secondary transition-all text-main font-semibold shadow-sm hover:shadow disabled:opacity-50"
+            >
+              <span className="mr-3"><FacebookIcon /></span>
+              Continue with Facebook
+            </button>
+          </div>
+
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-default"></div>
+            </div>
+            <div className="relative flex justify-center text-xs uppercase tracking-wider">
+              <span className="px-3 bg-card text-muted font-medium">Or continue with email</span>
+            </div>
+          </div>
+
+          {/* Email / Password Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {isRegistering && (
+              <div className="animate-fade-in">
+                <label htmlFor="auth-name" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1">
+                  Full Name
+                </label>
+                <input
+                  id="auth-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="e.g. Lamont Patrick"
+                  className="w-full px-3.5 py-2.5 border border-default rounded-xl focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent bg-card-secondary focus:bg-card text-main text-sm transition-all"
+                  required={isRegistering}
+                  disabled={loading}
+                />
+              </div>
+            )}
+            <div>
+              <label htmlFor="auth-email" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1">
+                Email Address
+              </label>
+              <input
+                id="auth-email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="your.email@example.com"
+                className="w-full px-3.5 py-2.5 border border-default rounded-xl focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent bg-card-secondary focus:bg-card text-main text-sm transition-all"
+                required
+                disabled={loading}
+              />
+            </div>
+            <div>
+              <label htmlFor="auth-password" className="block text-xs font-semibold text-muted uppercase tracking-wider mb-1">
+                Password
+              </label>
+              <input
+                id="auth-password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                className="w-full px-3.5 py-2.5 border border-default rounded-xl focus:ring-2 focus:ring-[#D4AF37] focus:border-transparent bg-card-secondary focus:bg-card text-main text-sm transition-all"
+                required
+                disabled={loading}
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-3 px-4 bg-[#D4AF37] hover:bg-[#C49E2B] text-stone-900 font-bold rounded-xl shadow-md hover:shadow-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ring-[#D4AF37] transition-all text-sm disabled:opacity-50"
+            >
+              {loading ? 'Processing...' : (isRegistering ? 'Create Free Account' : 'Sign In')}
+            </button>
+          </form>
+
+          <div className="mt-5 text-center text-sm">
+            <span className="text-muted">
+              {isRegistering ? 'Already have an account? ' : "Don't have an account? "}
+            </span>
+            <button
+              type="button"
+              onClick={() => {
+                setIsRegistering(!isRegistering);
+                setError(null);
+              }}
+              className="text-[#996515] dark:text-[#F5D77F] font-bold hover:underline ml-1"
+              disabled={loading}
+            >
+              {isRegistering ? 'Sign In' : 'Sign Up'}
+            </button>
+          </div>
+
+          {/* Zero Barrier Guest Mode */}
+          <div className="mt-6 pt-5 border-t border-default text-center">
+            <p className="text-xs text-muted mb-2">Want to use the app privately on this device without signing in?</p>
+            <button
+              type="button"
+              onClick={handleGuest}
+              disabled={loading}
+              className="inline-flex items-center space-x-2 px-4 py-2 rounded-xl text-xs font-semibold bg-stone-100 hover:bg-stone-200 dark:bg-stone-800 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 transition-colors"
+            >
+              <span>🕊️ Continue as Guest (Private Device Storage)</span>
+            </button>
+          </div>
         </div>
+
+        {/* Footer with Netlify Deployment Helper */}
+        <div className="bg-card-secondary/70 px-6 py-3.5 text-xs text-muted flex flex-wrap items-center justify-between gap-2 border-t border-default">
+          <button
+            type="button"
+            onClick={() => setShowNetlifyGuide(!showNetlifyGuide)}
+            className="text-[11px] text-[#996515] dark:text-[#F5D77F] hover:underline font-medium"
+          >
+            {showNetlifyGuide ? '▲ Hide Netlify Auth Instructions' : '▼ Netlify Deployment & Firebase Setup Guide'}
+          </button>
+          <button
+            type="button"
+            onClick={onClose}
+            className="text-xs text-muted hover:text-main font-medium"
+            disabled={loading}
+          >
+            Close
+          </button>
+        </div>
+
+        {showNetlifyGuide && (
+          <div className="px-6 py-4 bg-stone-50 dark:bg-stone-900 border-t border-default text-xs text-stone-700 dark:text-stone-300 space-y-2">
+            <p className="font-bold text-stone-900 dark:text-stone-100">
+              Why login requires domain authorization on Netlify:
+            </p>
+            <p>
+              Google & Firebase security rules require any website where users log in to be explicitly whitelisted to prevent unauthorized sites from pretending to be your app.
+            </p>
+            <div className="p-2.5 bg-white dark:bg-stone-950 rounded-lg border border-default space-y-1 font-mono text-[11px]">
+              <div><strong>Your Site:</strong> {currentHost}</div>
+              <div><strong>Firebase Project:</strong> gen-lang-client-0573843890</div>
+            </div>
+            <p>
+              To authorize this domain: Go to Firebase Console → Authentication → Settings tab → Authorized domains → Add domain → type <strong>{currentHost}</strong> → Save.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -3,6 +3,7 @@ import type { WeeklyTheme, SavedEntries, JournalResponses } from '../types';
 import { BrandLogo } from './BrandLogo';
 import { MASTER_TRACKS, type MasterTrackInfo } from '../constants/masterTracks';
 import { AudioRecorderButton } from './AudioRecorderButton';
+import { DaysSoberCounter } from './DaysSoberCounter';
 
 interface PhonePreviewModalProps {
   isOpen: boolean;
@@ -577,7 +578,7 @@ export const PhonePreviewModal: React.FC<PhonePreviewModalProps> = ({
 
                 {/* Scrollable Viewport Content */}
                 <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-[#FAF8F5] text-stone-800 text-xs leading-relaxed">
-                  {/* TAB 1: 12-STEP JOURNAL VIEW */}
+                  {/* TAB 1: WEEKLY JOURNAL VIEW */}
                   {activeTab === 'journal' && (
                     <div className={isTablet ? 'grid grid-cols-12 gap-4' : 'space-y-3 animate-fade-in'}>
                       {/* Left Column on Tablet / Top on Phone */}
@@ -1201,22 +1202,12 @@ export const PhonePreviewModal: React.FC<PhonePreviewModalProps> = ({
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-2 pt-2 border-t border-stone-100">
-                          <div className="bg-stone-50 p-2.5 rounded-lg text-center border border-stone-200">
-                            <span className="block text-lg font-bold text-[#AA8010]">
-                              {(() => {
-                                try {
-                                  const start = localStorage.getItem('soberStartDate');
-                                  if (start) {
-                                    const diff = Date.now() - new Date(start + 'T00:00:00').getTime();
-                                    return Math.max(0, Math.floor(diff / (1000 * 60 * 60 * 24)));
-                                  }
-                                } catch {}
-                                return 14;
-                              })()}
-                            </span>
-                            <span className="text-[10px] text-stone-500">Days Sober</span>
-                          </div>
+                        {/* Sacred Freedom & Clean Clock Counter with Detail Tab */}
+                        <div className="pt-2 border-t border-stone-100">
+                          <DaysSoberCounter onShowToast={onShowToast} />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 pt-2 border-t border-stone-100">
                           <div className="bg-stone-50 p-2.5 rounded-lg text-center border border-stone-200">
                             <span className="block text-lg font-bold text-[#AA8010]">
                               {currentWeek} / 52

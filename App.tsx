@@ -1190,6 +1190,10 @@ const App: React.FC = () => {
         isOpen={isAuthModalOpen}
         onClose={() => setIsAuthModalOpen(false)}
         onLogin={handleLogin}
+        onContinueAsGuest={() => {
+          setIsAuthModalOpen(false);
+          showToast("Operating in Private Device Mode. Your journal entries and recovery clock are saved safely on your device.", "info");
+        }}
       />
       <SOSModal 
         isOpen={isSOSOpen}

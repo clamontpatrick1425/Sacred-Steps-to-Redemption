@@ -61,6 +61,20 @@ export const DaysSoberCounter: React.FC<DaysSoberCounterProps> = ({ onShowToast 
     return () => clearInterval(timer);
   }, []);
 
+  // Escape key closes modal
+  useEffect(() => {
+    if (!showModal && !isEditingDate && !showGraceDialog) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setShowModal(false);
+        setIsEditingDate(false);
+        setShowGraceDialog(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showModal, isEditingDate, showGraceDialog]);
+
   // Save changes
   const handleSaveDate = (newDateStr: string) => {
     setSoberStartDate(newDateStr);
@@ -165,26 +179,40 @@ export const DaysSoberCounter: React.FC<DaysSoberCounterProps> = ({ onShowToast 
           <button
             type="button"
             onClick={() => setShowModal(true)}
-            className="text-[11px] text-[#AA8010] hover:text-[#8C6D1F] dark:text-[#F5D77F] font-semibold cursor-pointer hover:underline"
-            title="Open Detailed Sobriety Clock & Milestone Chips"
+            className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-lg text-xs font-bold bg-[#D4AF37]/15 hover:bg-[#D4AF37]/25 text-[#996515] dark:text-[#F5D77F] border border-[#D4AF37]/50 hover:border-[#D4AF37] transition-all shadow-xs cursor-pointer active:scale-95"
+            title="Open Sacred Freedom & Clean Clock in a pop-up window"
           >
-            Details ↗
+            <span>Detail</span>
+            <span className="text-[11px] font-mono">↗</span>
           </button>
         </div>
 
-        {/* Counter Display */}
-        <div className="flex items-baseline justify-between pt-0.5">
+        {/* Counter Display - Clickable to open Sacred Freedom & Clean Clock pop-up */}
+        <div
+          onClick={() => setShowModal(true)}
+          className="flex items-baseline justify-between pt-0.5 cursor-pointer group/counter hover:opacity-90 transition-opacity"
+          title="Click to view Sacred Freedom & Clean Clock"
+          role="button"
+          tabIndex={0}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              setShowModal(true);
+            }
+          }}
+        >
           <div>
             <div className="flex items-baseline space-x-1.5">
-              <span className="font-cinzel text-3xl font-extrabold text-[#D4AF37] tracking-tight leading-none">
+              <span className="font-cinzel text-3xl font-extrabold text-[#D4AF37] tracking-tight leading-none group-hover/counter:scale-105 transition-transform inline-block">
                 {stats.totalDays}
               </span>
               <span className="text-xs font-bold text-main uppercase tracking-wide">
                 {stats.totalDays === 1 ? 'Day Sober' : 'Days Sober'}
               </span>
             </div>
-            <p className="text-[11px] text-muted font-mono mt-1">
-              {stats.hours}h {stats.minutes}m {stats.seconds}s continuous
+            <p className="text-[11px] text-muted font-mono mt-1 flex items-center space-x-1">
+              <span>{stats.hours}h {stats.minutes}m {stats.seconds}s continuous</span>
+              <span className="text-[10px] text-primary underline underline-offset-2 opacity-80 group-hover/counter:opacity-100">(Tap for Detail)</span>
             </p>
           </div>
 
@@ -218,16 +246,22 @@ export const DaysSoberCounter: React.FC<DaysSoberCounterProps> = ({ onShowToast 
 
         {/* Quick Actions Footer */}
         <div className="flex items-center justify-between pt-1 border-t border-default/60 text-[11px]">
-          <span className="text-stone-500 dark:text-stone-400 italic font-serif-quote">
-            &ldquo;One day at a time.&rdquo;
-          </span>
+          <button
+            type="button"
+            onClick={() => setShowModal(true)}
+            className="text-[#996515] dark:text-[#F5D77F] font-semibold text-xs flex items-center space-x-1 cursor-pointer hover:underline"
+            title="Open Sacred Freedom & Clean Clock pop-up"
+          >
+            <span>Detail Clock</span>
+            <span className="text-[10px]">↗</span>
+          </button>
           <button
             type="button"
             onClick={() => {
               setTempDate(soberStartDate);
               setIsEditingDate(true);
             }}
-            className="text-muted hover:text-main text-[10px] cursor-pointer"
+            className="text-muted hover:text-main text-[11px] cursor-pointer hover:underline"
           >
             Edit Date
           </button>
@@ -302,7 +336,7 @@ export const DaysSoberCounter: React.FC<DaysSoberCounterProps> = ({ onShowToast 
                     Sacred Freedom &amp; Clean Clock
                   </h3>
                   <p className="text-[11px] text-muted font-mono">
-                    Clean since {new Date(soberStartDate).toLocaleDateString(undefined, { dateStyle: 'full' })}
+                    Clean since {new Date(soberStartDate + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'full' })}
                   </p>
                 </div>
               </div>
@@ -381,18 +415,31 @@ export const DaysSoberCounter: React.FC<DaysSoberCounterProps> = ({ onShowToast 
             </div>
 
             {/* Modal Actions */}
-            <div className="flex items-center justify-between pt-1 text-xs">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowModal(false);
-                  setTempDate(soberStartDate);
-                  setIsEditingDate(true);
-                }}
-                className="text-muted hover:text-main text-xs font-semibold cursor-pointer underline underline-offset-2"
-              >
-                Adjust Clean Date
-              </button>
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-default text-xs">
+              <div className="flex items-center space-x-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowModal(false);
+                    setTempDate(soberStartDate);
+                    setIsEditingDate(true);
+                  }}
+                  className="text-muted hover:text-main text-xs font-semibold cursor-pointer underline underline-offset-2"
+                >
+                  Adjust Clean Date
+                </button>
+                <span className="text-muted/40">&bull;</span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowModal(false);
+                    setShowGraceDialog(true);
+                  }}
+                  className="text-amber-600 dark:text-amber-400 hover:underline text-xs font-medium cursor-pointer"
+                >
+                  Day 1 Grace Reset
+                </button>
+              </div>
               <button
                 type="button"
                 onClick={() => setShowModal(false)}
