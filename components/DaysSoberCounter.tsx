@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
+import { createPortal } from 'react-dom';
 
 interface DaysSoberCounterProps {
   onShowToast?: (message: string, type: 'error' | 'info' | 'success') => void;
@@ -73,6 +74,17 @@ export const DaysSoberCounter: React.FC<DaysSoberCounterProps> = ({ onShowToast 
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showModal, isEditingDate, showGraceDialog]);
+
+  // Prevent background scroll when pop-up is active
+  useEffect(() => {
+    if (showModal || isEditingDate || showGraceDialog) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
   }, [showModal, isEditingDate, showGraceDialog]);
 
   // Save changes
@@ -268,225 +280,279 @@ export const DaysSoberCounter: React.FC<DaysSoberCounterProps> = ({ onShowToast 
         </div>
       </div>
 
-      {/* Edit Date Popover */}
-      {isEditingDate && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-card border border-default text-main rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl animate-fade-in">
-            <div className="flex justify-between items-center">
-              <h4 className="font-bold text-sm text-main">Set Your Sobriety Start Date</h4>
-              <button
-                type="button"
-                onClick={() => setIsEditingDate(false)}
-                className="text-muted hover:text-main text-sm cursor-pointer"
-              >
-                ✕
-              </button>
-            </div>
-            <p className="text-xs text-muted">
-              Choose the day your clean journey in grace began. Every 24 hours counts.
-            </p>
-            <div>
-              <label className="block text-xs font-semibold mb-1 text-muted">Start Date:</label>
-              <input
-                type="date"
-                value={tempDate}
-                max={new Date().toISOString().split('T')[0]}
-                onChange={(e) => setTempDate(e.target.value)}
-                className="w-full text-xs p-2.5 rounded-lg border border-default bg-card-secondary focus:outline-none focus:ring-1 focus:ring-primary"
-              />
-            </div>
-            <div className="flex justify-end space-x-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setIsEditingDate(false)}
-                className="px-3 py-1.5 rounded-lg text-xs font-medium border border-default hover:bg-card-secondary cursor-pointer"
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                onClick={() => handleSaveDate(tempDate)}
-                className="px-4 py-1.5 rounded-lg text-xs font-bold bg-primary text-on-primary hover:bg-primary-hover cursor-pointer shadow-xs"
-              >
-                Save Date
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Sacred Freedom & Clean Clock Pop-up Window (By Itself) */}
-      {showModal && (
-        <div
-          className="fixed inset-0 z-50 bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-fade-in"
-          onClick={() => setShowModal(false)}
-        >
+      {/* Edit Date Popover via Portal */}
+      {isEditingDate &&
+        typeof document !== 'undefined' &&
+        createPortal(
           <div
-            className="bg-card border border-[#D4AF37]/50 text-main rounded-3xl max-w-md w-full p-6 sm:p-7 shadow-2xl space-y-6 relative max-h-[92vh] overflow-y-auto"
-            onClick={(e) => e.stopPropagation()}
+            className="fixed inset-0 z-[99999] bg-black/80 backdrop-blur-sm flex items-center justify-center p-4 animate-fade-in"
+            onClick={() => setIsEditingDate(false)}
           >
-            {/* Header */}
-            <div className="flex items-center justify-between border-b border-default pb-3.5">
-              <div className="flex items-center space-x-3">
-                <span className="w-10 h-10 rounded-full bg-[#1C2A39] border border-[#D4AF37]/40 text-[#F5D77F] flex items-center justify-center text-xl font-bold shadow-xs">
-                  🕊️
-                </span>
-                <div>
-                  <h3 className="font-cinzel text-lg sm:text-xl font-bold text-main">
-                    Sacred Freedom &amp; Clean Clock
-                  </h3>
-                  <p className="text-[11px] text-muted font-mono">
-                    Clean since {new Date(soberStartDate + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'full' })}
-                  </p>
-                </div>
+            <div
+              className="bg-card border border-default text-main rounded-2xl max-w-sm w-full p-5 space-y-4 shadow-2xl relative my-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex justify-between items-center">
+                <h4 className="font-bold text-sm text-main">Set Your Sobriety Start Date</h4>
+                <button
+                  type="button"
+                  onClick={() => setIsEditingDate(false)}
+                  className="text-muted hover:text-main text-sm cursor-pointer"
+                  aria-label="Close"
+                >
+                  ✕
+                </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="w-8 h-8 rounded-full bg-card-secondary hover:bg-card border border-default flex items-center justify-center text-muted hover:text-main text-base font-bold cursor-pointer transition-colors"
-                aria-label="Close Clean Clock"
-              >
-                ✕
-              </button>
-            </div>
-
-            {/* Sacred Freedom & Clean Clock Centerpiece */}
-            <div className="bg-gradient-to-b from-[#1C2A39] via-[#162330] to-[#0F1722] text-white rounded-2xl p-6 sm:p-7 text-center shadow-xl border border-[#D4AF37]/40 relative overflow-hidden space-y-4">
-              {/* Gold ambient badge */}
-              <div className="inline-flex items-center space-x-1.5 px-3 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/50 text-[#F5D77F] text-[11px] font-bold uppercase tracking-widest shadow-xs">
-                <span>✨</span>
-                <span>Unbroken Grace &bull; Standing in the Light</span>
-              </div>
-
-              {/* Big Clean Days Display */}
+              <p className="text-xs text-muted">
+                Choose the day your clean journey in grace began. Every 24 hours counts.
+              </p>
               <div>
-                <span className="font-cinzel text-6xl sm:text-7xl font-extrabold text-[#F5D77F] tracking-tight block leading-none py-1">
-                  {stats.totalDays}
-                </span>
-                <span className="text-xs sm:text-sm uppercase tracking-widest text-slate-200 font-bold block mt-1">
-                  {stats.totalDays === 1 ? 'Day Living Clean & Free' : 'Days Living Clean & Free'}
-                </span>
+                <label className="block text-xs font-semibold mb-1 text-muted">Start Date:</label>
+                <input
+                  type="date"
+                  value={tempDate}
+                  max={new Date().toISOString().split('T')[0]}
+                  onChange={(e) => setTempDate(e.target.value)}
+                  className="w-full text-xs p-2.5 rounded-lg border border-default bg-card-secondary focus:outline-none focus:ring-1 focus:ring-primary"
+                />
               </div>
-
-              {/* Live Precision Clock Grid (Months, Days, Hours, Minutes, Seconds) */}
-              <div className="grid grid-cols-5 gap-1.5 sm:gap-2 pt-3 border-t border-slate-700/70 text-center font-mono">
-                <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/80 shadow-xs">
-                  <span className="block text-base sm:text-lg font-bold text-[#F5D77F]">{stats.months}</span>
-                  <span className="text-[9px] text-slate-400 uppercase font-sans tracking-wide">Mos</span>
-                </div>
-                <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/80 shadow-xs">
-                  <span className="block text-base sm:text-lg font-bold text-[#F5D77F]">{stats.remainingDays}</span>
-                  <span className="text-[9px] text-slate-400 uppercase font-sans tracking-wide">Days</span>
-                </div>
-                <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/80 shadow-xs">
-                  <span className="block text-base sm:text-lg font-bold text-[#F5D77F]">
-                    {String(stats.hours).padStart(2, '0')}
-                  </span>
-                  <span className="text-[9px] text-slate-400 uppercase font-sans tracking-wide">Hrs</span>
-                </div>
-                <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/80 shadow-xs">
-                  <span className="block text-base sm:text-lg font-bold text-[#F5D77F]">
-                    {String(stats.minutes).padStart(2, '0')}
-                  </span>
-                  <span className="text-[9px] text-slate-400 uppercase font-sans tracking-wide">Mins</span>
-                </div>
-                <div className="bg-slate-800/80 p-2 rounded-xl border border-emerald-500/40 shadow-xs ring-1 ring-emerald-500/20">
-                  <span className="block text-base sm:text-lg font-bold text-emerald-400 animate-pulse">
-                    {String(stats.seconds).padStart(2, '0')}
-                  </span>
-                  <span className="text-[9px] text-emerald-400 uppercase font-sans tracking-wide">Secs</span>
-                </div>
-              </div>
-
-              {/* Continuous Precision Line */}
-              <p className="text-[11px] text-slate-300 font-mono">
-                {stats.hoursReclaimed.toLocaleString()} continuous hours reclaimed in Christ
-              </p>
-            </div>
-
-            {/* Spiritual Scripture Anchor */}
-            <div className="p-4 bg-primary/5 rounded-2xl border border-[#D4AF37]/30 text-center space-y-1.5">
-              <p className="font-serif-quote italic text-xs sm:text-sm text-main leading-relaxed">
-                &ldquo;It is for freedom that Christ has set us free. Stand firm, then, and do not let yourselves be burdened again by a yoke of slavery.&rdquo;
-              </p>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-[#AA8010] dark:text-[#F5D77F] block">
-                Galatians 5:1 &bull; One Day At A Time
-              </span>
-            </div>
-
-            {/* Modal Actions */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-default text-xs">
-              <div className="flex items-center space-x-3">
+              <div className="flex justify-end space-x-2 pt-2">
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    setTempDate(soberStartDate);
-                    setIsEditingDate(true);
-                  }}
-                  className="text-muted hover:text-main text-xs font-semibold cursor-pointer underline underline-offset-2"
+                  onClick={() => setIsEditingDate(false)}
+                  className="px-3 py-1.5 rounded-lg text-xs font-medium border border-default hover:bg-card-secondary cursor-pointer"
                 >
-                  Adjust Clean Date
+                  Cancel
                 </button>
-                <span className="text-muted/40">&bull;</span>
                 <button
                   type="button"
-                  onClick={() => {
-                    setShowModal(false);
-                    setShowGraceDialog(true);
-                  }}
-                  className="text-amber-600 dark:text-amber-400 hover:underline text-xs font-medium cursor-pointer"
+                  onClick={() => handleSaveDate(tempDate)}
+                  className="px-4 py-1.5 rounded-lg text-xs font-bold bg-primary text-on-primary hover:bg-primary-hover cursor-pointer shadow-xs"
                 >
-                  Day 1 Grace Reset
+                  Save Date
                 </button>
               </div>
-              <button
-                type="button"
-                onClick={() => setShowModal(false)}
-                className="px-5 py-2 rounded-xl bg-primary text-on-primary hover:bg-primary-hover font-bold text-xs shadow-xs cursor-pointer transition-colors"
-              >
-                Close Window
-              </button>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
 
-      {/* Radical Grace Reset Confirmation */}
-      {showGraceDialog && (
-        <div className="fixed inset-0 z-60 bg-black/85 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-card border border-default text-main rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl animate-fade-in">
-            <div className="w-12 h-12 mx-auto rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-2xl">
-              🕊️
+      {/* Days in Grace & Freedom Pop-up Window - Standalone, Alone by Itself via Portal */}
+      {showModal &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-3 sm:p-5 overflow-y-auto animate-fade-in"
+            onClick={() => setShowModal(false)}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="sober-clock-title"
+          >
+            <div
+              className="bg-card border-2 border-[#D4AF37]/60 text-main rounded-3xl max-w-lg w-full p-6 sm:p-7 shadow-2xl space-y-6 relative max-h-[92vh] overflow-y-auto my-auto ring-1 ring-[#D4AF37]/25"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-default pb-3.5">
+                <div className="flex items-center space-x-3">
+                  <span className="w-11 h-11 rounded-full bg-[#1C2A39] border border-[#D4AF37]/50 text-[#F5D77F] flex items-center justify-center text-xl font-bold shadow-xs shrink-0">
+                    🕊️
+                  </span>
+                  <div>
+                    <h3 id="sober-clock-title" className="font-cinzel text-lg sm:text-xl font-bold text-main tracking-tight">
+                      Days in Grace &amp; Freedom
+                    </h3>
+                    <p className="text-[11px] text-muted font-mono">
+                      Clean since {new Date(soberStartDate + 'T00:00:00').toLocaleDateString(undefined, { dateStyle: 'full' })}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="w-8 h-8 rounded-full bg-card-secondary hover:bg-card border border-default flex items-center justify-center text-muted hover:text-main text-base font-bold cursor-pointer transition-colors"
+                  aria-label="Close Clean Clock"
+                >
+                  ✕
+                </button>
+              </div>
+
+              {/* Sacred Freedom & Clean Clock Centerpiece */}
+              <div className="bg-gradient-to-b from-[#1C2A39] via-[#162330] to-[#0F1722] text-white rounded-2xl p-6 sm:p-7 text-center shadow-xl border border-[#D4AF37]/40 relative overflow-hidden space-y-4">
+                {/* Gold ambient badge */}
+                <div className="inline-flex items-center space-x-1.5 px-3.5 py-1 rounded-full bg-[#D4AF37]/20 border border-[#D4AF37]/50 text-[#F5D77F] text-[11px] font-bold uppercase tracking-widest shadow-xs">
+                  <span>✨</span>
+                  <span>Unbroken Grace &bull; Standing in the Light</span>
+                </div>
+
+                {/* Big Clean Days Display */}
+                <div>
+                  <span className="font-cinzel text-6xl sm:text-7xl font-extrabold text-[#F5D77F] tracking-tight block leading-none py-1">
+                    {stats.totalDays}
+                  </span>
+                  <span className="text-xs sm:text-sm uppercase tracking-widest text-slate-200 font-bold block mt-1">
+                    {stats.totalDays === 1 ? 'Day Living Clean & Free' : 'Days Living Clean & Free'}
+                  </span>
+                </div>
+
+                {/* Live Precision Clock Grid (Months, Days, Hours, Minutes, Seconds) */}
+                <div className="grid grid-cols-5 gap-1.5 sm:gap-2 pt-3 border-t border-slate-700/70 text-center font-mono">
+                  <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/80 shadow-xs">
+                    <span className="block text-base sm:text-lg font-bold text-[#F5D77F]">{stats.months}</span>
+                    <span className="text-[9px] text-slate-400 uppercase font-sans tracking-wide">Mos</span>
+                  </div>
+                  <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/80 shadow-xs">
+                    <span className="block text-base sm:text-lg font-bold text-[#F5D77F]">{stats.remainingDays}</span>
+                    <span className="text-[9px] text-slate-400 uppercase font-sans tracking-wide">Days</span>
+                  </div>
+                  <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/80 shadow-xs">
+                    <span className="block text-base sm:text-lg font-bold text-[#F5D77F]">
+                      {String(stats.hours).padStart(2, '0')}
+                    </span>
+                    <span className="text-[9px] text-slate-400 uppercase font-sans tracking-wide">Hrs</span>
+                  </div>
+                  <div className="bg-slate-800/80 p-2 rounded-xl border border-slate-700/80 shadow-xs">
+                    <span className="block text-base sm:text-lg font-bold text-[#F5D77F]">
+                      {String(stats.minutes).padStart(2, '0')}
+                    </span>
+                    <span className="text-[9px] text-slate-400 uppercase font-sans tracking-wide">Mins</span>
+                  </div>
+                  <div className="bg-slate-800/80 p-2 rounded-xl border border-emerald-500/40 shadow-xs ring-1 ring-emerald-500/20">
+                    <span className="block text-base sm:text-lg font-bold text-emerald-400 animate-pulse">
+                      {String(stats.seconds).padStart(2, '0')}
+                    </span>
+                    <span className="text-[9px] text-emerald-400 uppercase font-sans tracking-wide">Secs</span>
+                  </div>
+                </div>
+
+                {/* Continuous Precision Line */}
+                <p className="text-[11px] text-slate-300 font-mono">
+                  {stats.hoursReclaimed.toLocaleString()} continuous hours reclaimed in Christ
+                </p>
+              </div>
+
+              {/* Grace Milestone Progress inside Pop-up */}
+              <div className="bg-card-secondary p-4 rounded-2xl border border-default space-y-2.5">
+                <div className="flex items-center justify-between text-xs">
+                  <div className="flex items-center space-x-2">
+                    {stats.currentMilestone && (
+                      <span className={`w-6 h-6 rounded-full bg-gradient-to-br ${stats.currentMilestone.chipColor} text-white flex items-center justify-center text-xs shadow-xs`}>
+                        {stats.currentMilestone.badge}
+                      </span>
+                    )}
+                    <span className="font-semibold text-main">
+                      {stats.currentMilestone ? `Achieved: ${stats.currentMilestone.label}` : 'Beginning the Journey'}
+                    </span>
+                  </div>
+                  <span className="text-[11px] text-muted">
+                    Next: <strong className="text-main">{stats.nextMilestone.label}</strong> ({stats.daysToNext} days left)
+                  </span>
+                </div>
+                <div className="w-full bg-card h-2.5 rounded-full overflow-hidden border border-default/70">
+                  <div
+                    className="bg-gradient-to-r from-[#D4AF37] to-emerald-500 h-full rounded-full transition-all duration-500"
+                    style={{ width: `${stats.progressPercent}%` }}
+                  />
+                </div>
+                <div className="flex justify-between text-[10px] text-muted font-mono">
+                  <span>{stats.progressPercent}% to next milestone</span>
+                  <span>{stats.totalDays} / {stats.nextMilestone.days} days</span>
+                </div>
+              </div>
+
+              {/* Spiritual Scripture Anchor */}
+              <div className="p-4 bg-primary/5 rounded-2xl border border-[#D4AF37]/30 text-center space-y-1.5">
+                <p className="font-serif-quote italic text-xs sm:text-sm text-main leading-relaxed">
+                  &ldquo;It is for freedom that Christ has set us free. Stand firm, then, and do not let yourselves be burdened again by a yoke of slavery.&rdquo;
+                </p>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-[#AA8010] dark:text-[#F5D77F] block">
+                  Galatians 5:1 &bull; One Day At A Time
+                </span>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-default text-xs">
+                <div className="flex items-center space-x-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowModal(false);
+                      setTempDate(soberStartDate);
+                      setIsEditingDate(true);
+                    }}
+                    className="text-muted hover:text-main text-xs font-semibold cursor-pointer underline underline-offset-2"
+                  >
+                    Adjust Clean Date
+                  </button>
+                  <span className="text-muted/40">&bull;</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowModal(false);
+                      setShowGraceDialog(true);
+                    }}
+                    className="text-amber-600 dark:text-amber-400 hover:underline text-xs font-medium cursor-pointer"
+                  >
+                    Day 1 Grace Reset
+                  </button>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowModal(false)}
+                  className="px-5 py-2 rounded-xl bg-primary text-on-primary hover:bg-primary-hover font-bold text-xs shadow-xs cursor-pointer transition-colors"
+                >
+                  Close Window
+                </button>
+              </div>
             </div>
-            <h4 className="font-cinzel text-lg font-bold text-main">
-              A Stumble Is Not the End
-            </h4>
-            <p className="text-xs text-muted leading-relaxed">
-              &ldquo;The steadfast love of the Lord never ceases; his mercies never come to an end; they are new every morning.&rdquo; (Lamentations 3:22–23)
-            </p>
-            <p className="text-xs text-main font-medium">
-              You are not starting from scratch; you are starting from experience and grace. Ready to begin Day 1 with fresh resolve?
-            </p>
-            <div className="flex space-x-2 pt-2">
-              <button
-                type="button"
-                onClick={() => setShowGraceDialog(false)}
-                className="flex-1 py-2 text-xs font-semibold rounded-lg border border-default hover:bg-card-secondary cursor-pointer"
-              >
-                Keep Current Date
-              </button>
-              <button
-                type="button"
-                onClick={handleGraceReset}
-                className="flex-1 py-2 text-xs font-bold rounded-lg bg-[#D4AF37] hover:bg-[#AA8010] text-slate-950 cursor-pointer shadow-xs"
-              >
-                Start Day 1 in Grace
-              </button>
+          </div>,
+          document.body
+        )}
+
+      {/* Radical Grace Reset Confirmation via Portal */}
+      {showGraceDialog &&
+        typeof document !== 'undefined' &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[99999] bg-black/85 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+            onClick={() => setShowGraceDialog(false)}
+          >
+            <div
+              className="bg-card border border-default text-main rounded-2xl max-w-sm w-full p-6 text-center space-y-4 shadow-2xl relative my-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="w-12 h-12 mx-auto rounded-full bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center text-2xl">
+                🕊️
+              </div>
+              <h4 className="font-cinzel text-lg font-bold text-main">
+                A Stumble Is Not the End
+              </h4>
+              <p className="text-xs text-muted leading-relaxed">
+                &ldquo;The steadfast love of the Lord never ceases; his mercies never come to an end; they are new every morning.&rdquo; (Lamentations 3:22–23)
+              </p>
+              <p className="text-xs text-main font-medium">
+                You are not starting from scratch; you are starting from experience and grace. Ready to begin Day 1 with fresh resolve?
+              </p>
+              <div className="flex space-x-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setShowGraceDialog(false)}
+                  className="flex-1 py-2 text-xs font-semibold rounded-lg border border-default hover:bg-card-secondary cursor-pointer"
+                >
+                  Keep Current Date
+                </button>
+                <button
+                  type="button"
+                  onClick={handleGraceReset}
+                  className="flex-1 py-2 text-xs font-bold rounded-lg bg-[#D4AF37] hover:bg-[#AA8010] text-slate-950 cursor-pointer shadow-xs"
+                >
+                  Start Day 1 in Grace
+                </button>
+              </div>
             </div>
-          </div>
-        </div>
-      )}
+          </div>,
+          document.body
+        )}
     </>
   );
 };

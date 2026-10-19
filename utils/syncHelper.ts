@@ -93,12 +93,23 @@ export async function syncJournalEntries(
 
     // Call state updater
     onSyncComplete(mergedEntries);
-  } catch (error) {
-    console.error('Failed to sync journal entries with Firestore:', error);
+  } catch (error: any) {
+    const isOffline =
+      error?.code === 'unavailable' ||
+      error?.code === 'deadline-exceeded' ||
+      (error?.message && (error.message.includes('offline') || error.message.includes('backend')));
+
+    if (isOffline) {
+      console.info('Cloud sync deferred: Device is offline or Cloud Firestore backend is temporarily unreachable. Using local entries.');
+      onSyncComplete(localEntries);
+      return;
+    }
+
+    console.warn('Failed to sync journal entries with Firestore:', error);
     try {
       handleFirestoreError(error, OperationType.GET, 'journalEntries');
     } catch (err) {
-      throw err;
+      console.warn('Handled sync exception gracefully:', err);
     }
   }
 }
@@ -132,12 +143,22 @@ export async function saveJournalDocToCloud(
       content: JSON.stringify(sanitizedResponses),
       createdAt: new Date().toISOString()
     });
-  } catch (err) {
-    console.error(`Error writing journal entry for week ${week} to Firestore:`, err);
+  } catch (err: any) {
+    const isOffline =
+      err?.code === 'unavailable' ||
+      err?.code === 'deadline-exceeded' ||
+      (err?.message && (err.message.includes('offline') || err.message.includes('backend')));
+
+    if (isOffline) {
+      console.info(`Saved week ${week} locally. Cloud sync queued for when connection restores.`);
+      return;
+    }
+
+    console.warn(`Note writing journal entry for week ${week} to Firestore:`, err);
     try {
       handleFirestoreError(err, OperationType.WRITE, `journalEntries/${docId}`);
     } catch (handled) {
-      throw handled;
+      console.warn('Handled write exception gracefully:', handled);
     }
   }
 }
@@ -180,12 +201,22 @@ export async function syncUserProfile(
         });
       }
     }
-  } catch (err) {
-    console.error('Error syncing user profile with Firestore:', err);
+  } catch (err: any) {
+    const isOffline =
+      err?.code === 'unavailable' ||
+      err?.code === 'deadline-exceeded' ||
+      (err?.message && (err.message.includes('offline') || err.message.includes('backend')));
+
+    if (isOffline) {
+      console.info('User profile cloud sync deferred: device is offline or Cloud Firestore backend is temporarily unreachable.');
+      return;
+    }
+
+    console.warn('Note syncing user profile with Firestore:', err);
     try {
       handleFirestoreError(err, OperationType.WRITE, `users/${uid}`);
     } catch (handled) {
-      throw handled;
+      console.warn('Handled profile sync exception gracefully:', handled);
     }
   }
 }

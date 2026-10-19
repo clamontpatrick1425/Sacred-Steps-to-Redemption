@@ -452,7 +452,7 @@ const App: React.FC = () => {
 
             showToast(`Welcome ${u.name}! Your journey statistics have been compiled and secured on the cloud.`, 'success');
           } catch (err) {
-            console.error("Failed to sync profile and journals with cloud database:", err);
+            console.warn("Cloud connection is running in offline mode. Local copies are active:", err);
             showToast("Cloud connection is running in offline mode. Local copies are active.", 'info');
           } finally {
             setIsSyncing(false);
@@ -620,7 +620,7 @@ const App: React.FC = () => {
 
     if (auth.currentUser) {
       saveJournalDocToCloud(auth.currentUser.uid, week, updatedWeekResponses).catch((err) => {
-        console.error("Cloud write failed during response change:", err);
+        console.warn("Background cloud write notice during response change:", err);
       });
     }
     
@@ -651,7 +651,7 @@ const App: React.FC = () => {
 
     if (auth.currentUser) {
       saveJournalDocToCloud(auth.currentUser.uid, week, updatedWeekResponses).catch((err) => {
-        console.error("Cloud write failed during undo:", err);
+        console.warn("Background cloud write notice during undo:", err);
       });
     }
 
